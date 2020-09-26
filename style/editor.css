@@ -1,0 +1,9 @@
+.graph-editor {
+  height: 100%;
+}
+.graph-editor .content {
+  height: 100%;
+}
+.graph-editor .content .editor-area {
+  height: 100%;
+}
