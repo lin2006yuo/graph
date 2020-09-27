@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scale</title>
+    <link rel="stylesheet" href="../style.css" />
+    <script src="../size.js"></script>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      let { canvas, width: canvasWidth, height: canvasHeight } = new KSize(
+        "canvs"
+      )
+      let ctx = canvas.getContext("2d")
+      let img = new Image()
+      img.src = "../blackhold.jpg"
+      img.onload = function () {
+        drawImage()
+      }
+      let scale = 1
+      canvas.addEventListener("mousewheel", (e) => {
+        console.log(e)
+        let wheelDelta = e.wheelDelta
+        if (wheelDelta > 0) {
+          scale *= 1.1
+        } else {
+          scale *= 1 / 1.1
+        }
+        drawScale(scale, e)
+      })
+      function drawImage() {
+        ctx.drawImage(
+          img,
+          0,
+          0,
+          img.width,
+          img.height,
+          0,
+          0,
+          img.width / 5,
+          img.height / 5
+        )
+      }
+      let offset = [0, 0]
+      let t_scale = 1
+      function drawScale(value, e) {
+        // 清空
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+        ctx.save()
+        const center = pos([e.offsetX, e.offsetY])
+        t_scale = value
+        const new_center = pos([e.offsetX, e.offsetY])
+        ctx.scale(t_scale, t_scale)
+        let delta_offset = [new_center[0] - center[0], new_center[1] - center[1]]
+        offset[0] += delta_offset[0]
+        offset[1] += delta_offset[1]
+        ctx.translate(offset[0], offset[1])
+        this.drawImage()
+        ctx.restore()
+      }
+      function pos(pos) {
+        let out = [0, 0]
+        out[0] = pos[0] / t_scale
+        out[1] = pos[1] / t_scale
+        return out
+      }
+    </script>
+  </body>
+</html>

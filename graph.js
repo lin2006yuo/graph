@@ -71,21 +71,25 @@ class DragAndScale {
     if (!rect) return
     zooming_center = zooming_center || [rect.width * 0.5, rect.height * 0.5]
     let center = this.converCanvasToOffset(zooming_center)
+
     this.scale = value
+
     let new_center = this.converCanvasToOffset(zooming_center)
-    this.scale = value
+
     let delta_offset = [new_center[0] - center[0], new_center[1] - center[1]]
+
     this.offset[0] += delta_offset[0]
     this.offset[1] += delta_offset[1]
   }
   converCanvasToOffset(pos, out) {
     out = out || [0, 0]
-    out[0] = pos[0] / this.scale - this.offset[0]
-    out[1] = pos[1] / this.scale - this.offset[1]
+    out[0] = pos[0] / this.scale
+    out[1] = pos[1] / this.scale
     return out
   }
   toCanvasContext(ctx) {
     ctx.scale(this.scale, this.scale)
+    console.log(this.offset[0])
     ctx.translate(this.offset[0], this.offset[1])
   }
 }
@@ -181,7 +185,6 @@ class GraphCanvas {
     if (this.bgcanvas == this.canvas) {
       this.drawBackCanvas()
     } else {
-      console.log('draw')
       ctx.drawImage(this.bgcanvas, 0, 0)
     }
 
@@ -189,10 +192,7 @@ class GraphCanvas {
     // ctx.translate(1, 1);
 
     if (this.graph) {
-      // 应用转换
-      // ctx.save();
-      // this.ds.toCanvasContext(ctx)
-      // ctx.restore()
+
     }
   }
   drawBackCanvas() {
@@ -247,14 +247,10 @@ class GraphCanvas {
         if (pattern) {
           ctx.fillStyle = pattern
           ctx.fillRect(
-            // this.visible_area[0],
-            // this.visible_area[1],
-            // this.visible_area[2],
-            // this.visible_area[3]
-            0,
-            0,
-            500,
-            500
+            this.visible_area[0],
+            this.visible_area[1],
+            this.visible_area[2],
+            this.visible_area[3]
           )
           ctx.fillStyle = "transparent"
         }
