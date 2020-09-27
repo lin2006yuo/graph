@@ -1,6 +1,6 @@
 ## canvas流程图
 
-[preview](https://graph-8qv16umy2.vercel.app/)  
+[preview](https://graph.lin2006yuo.vercel.app/)  
 发育中...   
 
 ---
