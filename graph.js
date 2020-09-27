@@ -181,6 +181,7 @@ class GraphCanvas {
     if (this.bgcanvas == this.canvas) {
       this.drawBackCanvas()
     } else {
+      console.log('draw')
       ctx.drawImage(this.bgcanvas, 0, 0)
     }
 
@@ -188,8 +189,10 @@ class GraphCanvas {
     // ctx.translate(1, 1);
 
     if (this.graph) {
-      //apply transformations
-      this.ds.toCanvasContext(ctx)
+      // 应用转换
+      // ctx.save();
+      // this.ds.toCanvasContext(ctx)
+      // ctx.restore()
     }
   }
   drawBackCanvas() {
@@ -214,9 +217,11 @@ class GraphCanvas {
 
     //
     // ctx.setTransform(1, 0, 0, 1, 0, 0)
+    // ctx.restore();
 
     if (this.graph) {
-      // this.ds.toCanvasContext(ctx)
+      ctx.save();
+      this.ds.toCanvasContext(ctx)
 
       if (this.background_image && !bg_already_painted) {
         ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = false
@@ -240,12 +245,6 @@ class GraphCanvas {
         }
 
         if (pattern) {
-          console.log(
-            "pattern",
-            this.ds.scale,
-            this.bgcanvas.width,
-            this.bgcanvas.height
-          )
           ctx.fillStyle = pattern
           ctx.fillRect(
             // this.visible_area[0],
@@ -261,14 +260,15 @@ class GraphCanvas {
         }
         ctx.globalAlpha = 1.0
         ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = true
+        ctx.restore();
       }
     }
-    this.dirty_bgcanvas = true
+    this.dirty_bgcanvas = false
     this.dirty_canvas = true
   }
   bindEvents() {
     if (this._event_binded) {
-      console.log("GraphCanvas: events already binded")
+      console.warn("GraphCanvas: events already binded")
       return
     }
     let canvas = this.canvas
