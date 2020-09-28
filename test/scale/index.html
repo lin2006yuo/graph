@@ -74,6 +74,7 @@
         ctx.beginPath()
       }
       let offset = [0, 0]
+      let [c_offsetX, c_offsetY] = [0, 0]
       let t_scale = 1
       function drawScale(value, e) {
         // 清空
@@ -82,7 +83,7 @@
 
         /**
          * canvas缩放原点scale-origin默认为左上角(0,0)，在缩放的时候需要转换原点，canvas没有提供api，通过translate实现
-         * 起始点为a1(x, y), 缩放比为n, 则缩放后的点为a2(nx, ny), 
+         * 起始点为a1(x, y), 缩放比为n, 则缩放后的点为a2(nx, ny),
          * 可得: x轴偏移值为x - nx，y轴偏移的位置值为y- ny，由于做了缩放，实际上求出来的偏移值是经过缩放的，所以需要再除以n
          * 最终解: x -> (x - nx)/n = x/n - x
          *        y -> (y - ny)/n = y/n -y
@@ -94,22 +95,44 @@
         let delta_offset = [new_center[0] - center[0], new_center[1] - center[1]]
         offset[0] += delta_offset[0]
         offset[1] += delta_offset[1]
+        console.log({x: offset[0], y: offset[1], scale, e: e.offsetX})
         ctx.translate(offset[0], offset[1])
 
-        // let [oX, oY] = [
-        //   e.offsetX / scale - e.offsetX,
-        //   e.offsetY / scale - e.offsetY
+        // test
+        // 转换后的点
+        // const [c_x, c_y] = [e.offsetX * value, e.offsetY * value]
+        // const [delta_offsetX, delta_offsetY] = [
+        //   e.offsetX * t_scale - c_x,
+        //   e.offsetY * t_scale - c_y,
         // ]
+        // t_scale = value
+        // c_offsetX += delta_offsetX
+        // c_offsetY += delta_offsetY
+        // console.log({ x: delta_offsetX, y: delta_offsetY, scale, e: e.offsetX })
+        // ctx.translate(c_offsetX, c_offsetY)
+        // ctx.scale(value, value)
 
+        // test2
+        // let eOffsetX = e.offsetX
+        // let eOffsetY = e.offsetY
+        // const [c_x, c_y] = [eOffsetX * value, eOffsetY * value]
+        // const [delta_offsetX, delta_offsetY] = [
+        //   eOffsetX * t_scale - c_x,
+        //   eOffsetY * t_scale - c_y,
+        // ]
+        // t_scale = value
+        // c_offsetX += delta_offsetX
+        // c_offsetY += delta_offsetY
+        // console.log({ x: delta_offsetX, y: delta_offsetY, scale, e: e.offsetX })
+        // ctx.translate(c_offsetX, c_offsetY)
+        // ctx.scale(value, value)
+
+        // static
         // let offset = 60
         // let oScale = 3
-        // offset - offset * oScale / oScale
-        // ctx.scale(oScale, oScale)
-        // const [otX, otY] = [60, 60]
-        // // const [otX, otY] = [offset / oScale - offset, offset / oScale - offset]
-
-        // console.log(otX, otY)
+        // const [otX, otY] = [-120, -120] // -40 = (60 - 60 * 3) / 3
         // ctx.translate(otX, otY)
+        // ctx.scale(oScale, oScale)
 
         this.drawImage()
         ctx.restore()
