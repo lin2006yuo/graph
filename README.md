@@ -21,7 +21,7 @@ GraphCanvas(canvas, graph)
 ⚠  
 1. beginPath 清除 path
 
-### Zoom 缩放
+### Zoom 缩放 [demo](https://graph-three.vercel.app/test/scale/index.html)
 
 使用ctx.dragImage(canvas, 0, 0), 具体流程：  
 1. 根据滚轮事件调整scale大小
