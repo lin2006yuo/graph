@@ -11,37 +11,67 @@
     <canvas id="canvas"></canvas>
     <script>
       let { canvas, width: canvasWidth, height: canvasHeight } = new KSize(
-        "canvs"
+        "canvas"
       )
       let ctx = canvas.getContext("2d")
       let img = new Image()
       img.src = "../blackhold.jpg"
       img.onload = function () {
         drawImage()
+        drawCoord()
+        drawTemp()
       }
       let scale = 1
       canvas.addEventListener("mousewheel", (e) => {
-        console.log(e)
+        e.preventDefault()
         let wheelDelta = e.wheelDelta
         if (wheelDelta > 0) {
           scale *= 1.1
         } else {
           scale *= 1 / 1.1
         }
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight)
         drawScale(scale, e)
+        drawCoord()
+        drawTemp()
+        ctx.stroke()
       })
       function drawImage() {
-        ctx.drawImage(
-          img,
-          0,
-          0,
-          img.width,
-          img.height,
-          0,
-          0,
-          img.width / 5,
-          img.height / 5
-        )
+        ctx.drawImage(img, 0, 0, img.width, img.height, 0, 0, 160, 160)
+      }
+      function drawTemp() {
+        ctx.save()
+        ctx.translate(60, 60)
+        ctx.rect(0, 0, 80, 80)
+        ctx.stroke()
+        ctx.restore()
+      }
+      function drawCoord() {
+        console.log("drawCoord")
+        ctx.save()
+        ctx.beginPath()
+        // x轴
+        for (var i = 0; i < canvasWidth / 20; i++) {
+          xValue = i * 20
+          ctx.moveTo(xValue, 0)
+          ctx.lineTo(xValue, 10)
+          ctx.fillStyle = "red"
+          ctx.fillText(xValue, xValue - 6, 20)
+          ctx.strokeStyle = "red"
+        }
+        // y轴
+        for (var i = 0; i < canvasWidth / 20; i++) {
+          yValue = i * 20
+          ctx.moveTo(0, yValue)
+          ctx.lineTo(10, yValue)
+          ctx.fillStyle = "red"
+          ctx.fillText(yValue, 20, yValue - 6)
+          ctx.strokeStyle = "red"
+        }
+        ctx.stroke()
+        ctx.restore()
+        // 清除patH
+        ctx.beginPath()
       }
       let offset = [0, 0]
       let t_scale = 1
@@ -49,6 +79,14 @@
         // 清空
         ctx.clearRect(0, 0, canvasWidth, canvasHeight)
         ctx.save()
+
+        /**
+         * canvas缩放原点scale-origin默认为左上角(0,0)，在缩放的时候需要转换原点，canvas没有提供api，通过translate实现
+         * 起始点为a1(x, y), 缩放比为n, 则缩放后的点为a2(nx, ny), 
+         * 可得: x轴偏移值为x - nx，y轴偏移的位置值为y- ny，由于做了缩放，实际上求出来的偏移值是经过缩放的，所以需要再除以n
+         * 最终解: x -> (x - nx)/n = x/n - x
+         *        y -> (y - ny)/n = y/n -y
+         * */
         const center = pos([e.offsetX, e.offsetY])
         t_scale = value
         const new_center = pos([e.offsetX, e.offsetY])
@@ -57,6 +95,22 @@
         offset[0] += delta_offset[0]
         offset[1] += delta_offset[1]
         ctx.translate(offset[0], offset[1])
+
+        // let [oX, oY] = [
+        //   e.offsetX / scale - e.offsetX,
+        //   e.offsetY / scale - e.offsetY
+        // ]
+
+        // let offset = 60
+        // let oScale = 3
+        // offset - offset * oScale / oScale
+        // ctx.scale(oScale, oScale)
+        // const [otX, otY] = [60, 60]
+        // // const [otX, otY] = [offset / oScale - offset, offset / oScale - offset]
+
+        // console.log(otX, otY)
+        // ctx.translate(otX, otY)
+
         this.drawImage()
         ctx.restore()
       }
