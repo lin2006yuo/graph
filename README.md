@@ -1,8 +1,10 @@
 ## canvas流程图
 
 [preview](https://graph.lin2006yuo.vercel.app/)  
-发育中...   
-zoom - doing
+发育中...  
+**bg**   
+zoom - done  
+drag - done
 
 ---
 ## mark
