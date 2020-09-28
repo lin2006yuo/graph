@@ -15,7 +15,9 @@ GraphCanvas(canvas, graph)
 - draw *requestAnimation持续绘制
 - ds.computeVisibleArea 计算可视区域
 - drawBackCanvas *网格
-- drawFrontCanvase
+- drawFrontCanvase    
+⚠  
+1. beginPath 清除 path
 
 ### Zoom 缩放
 

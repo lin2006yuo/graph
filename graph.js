@@ -1,5 +1,8 @@
 class Graph {
   constructor() {}
+  static getTime = function () {
+    return Date.now.bind(Date)
+  }
   attachCanvas(graphcanvas) {
     if (graphcanvas.constructor !== GraphCanvas) {
       throw "attachCanvas expects a GraphCanvas instance"
@@ -26,6 +29,7 @@ class Graph {
       }
     }
   }
+  getTime() {}
 }
 class DragAndScale {
   constructor() {
@@ -89,7 +93,6 @@ class DragAndScale {
   }
   toCanvasContext(ctx) {
     ctx.scale(this.scale, this.scale)
-    console.log(this.offset[0])
     ctx.translate(this.offset[0], this.offset[1])
   }
 }
@@ -109,10 +112,18 @@ class GraphCanvas {
     this.background_image = GraphCanvas.DEFAULT_BACKGROUND_IMAGE
     this.visible_area = this.ds.visible_area
     this.last_mouse_position = [0, 0]
+    this.editor_alpha = 1
+    this.mouse = [0, 0]
+
+    this.render_canvas_border = true
+    this.set_canvas_dirty_on_mouse_event = true
+    this.zoom_modify_alpha = true
+
     if (graph) {
       graph.attachCanvas(this)
     }
     this.setCanvas(canvas)
+    this.clear()
     this.startRendering()
   }
   setCanvas(canvas, skip_events) {
@@ -192,7 +203,6 @@ class GraphCanvas {
     // ctx.translate(1, 1);
 
     if (this.graph) {
-
     }
   }
   drawBackCanvas() {
@@ -215,15 +225,17 @@ class GraphCanvas {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
     }
 
-    //
-    // ctx.setTransform(1, 0, 0, 1, 0, 0)
-    // ctx.restore();
-
     if (this.graph) {
-      ctx.save();
+      ctx.save()
       this.ds.toCanvasContext(ctx)
 
-      if (this.background_image && !bg_already_painted) {
+      // 绘制网格
+      if (this.background_image && !bg_already_painted && this.ds.scale > 0.5) {
+        if (this.zoom_modify_alpha) {
+          ctx.globalAlpha = (1.0 - 0.5 / this.ds.scale) * this.editor_alpha
+        } else {
+          ctx.globalAlpha = this.editor_alpha
+        }
         ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = false
         if (!this._bg_img) {
           this._bg_img = new Image()
@@ -256,9 +268,16 @@ class GraphCanvas {
         }
         ctx.globalAlpha = 1.0
         ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = true
-        ctx.restore();
       }
+
+      // 绘制border
+      if (this.render_canvas_border) {
+        ctx.strokeStyle = "#235"
+        ctx.strokeRect(0, 0, canvas.width, canvas.height)
+      }
+      ctx.restore()
     }
+
     this.dirty_bgcanvas = false
     this.dirty_canvas = true
   }
@@ -267,16 +286,84 @@ class GraphCanvas {
       console.warn("GraphCanvas: events already binded")
       return
     }
+
     let canvas = this.canvas
     let window = this.getCanvasWindow()
+
     this._mousewheel_callback = this.processMouseWheel.bind(this)
+    this._mousedown_callback = this.processMouseDown.bind(this)
     canvas.addEventListener("mousewheel", this._mousewheel_callback)
+    canvas.addEventListener("mousemove", this._mousemove_callback)
+    canvas.addEventListener("mousedown", this._mousedown_callback, true)
     this._event_binded = true
   }
 
-  processMouseMove() {}
+  processMouseDown(e) {
+    if (!this.graph) return
 
-  processMouseUp() {}
+    this.adjustMouseEvent(e)
+
+    let ref_window = this.getCanvasWindow()
+
+    // 移除canvas的mouse事件，用window监听，当鼠标再canvas外仍能拖拽
+    this.canvas.removeEventListener("mousemove", this._mouseup_callback)
+    ref_window.document.addEventListener(
+      "mousemove",
+      this._mousemove_callback,
+      true
+    )
+    ref_window.document.addEventListener(
+      "mouseup",
+      this._mouseup_callback,
+      true
+    )
+
+    let clicking_canvas_bg = true
+    // 点击bg则为拖拽
+    if (clicking_canvas_bg) {
+      this.dragging_canvas = true
+    }
+
+    this.last_mouse[0] = e.localX
+    this.last_mouse[1] = e.localY
+    this.last_mouseclick = Graph.getTime()
+    this.last_mouse_dragging = true
+  }
+
+  processMouseMove(e) {
+    if (this.set_canvas_dirty_on_mouse_event) {
+      this.dirty_canvas = true
+    }
+    if (!this.graph) return
+    this.adjustMouseEvent(e)
+    let mouse = [e.localX, e.localY]
+    this.mouse[0] = mouse[0]
+    this.mouse[1] = mouse[1]
+    let delta = [mouse[0] - this.last_mouse[0], mouse[1] - this.last_mouse[1]]
+    this.last_mouse = mouse
+
+    e.dragging = this.last_mouse_dragging
+    if (this.dragging_canvas) {
+      this.ds.offset[0] += delta[0] / this.ds.scale
+      this.ds.offset[1] += delta[1] / this.ds.scale
+      this.dirty_canvas = true
+      this.dirty_bgcanvas = true
+    }
+    e.preventDefault();
+  }
+
+  processMouseUp(e) {
+    if(!this.graph) return 
+    let ref_window = this.getCanvasWindow()
+    ref_window.removeEventListener('mousemove', this._mousemove_callback, true)
+    this.canvas.addEventListener('mousemove', this._mousemove_callback, true)
+    ref_window.removeEventListener('mouseup', this._mouseup_callback, true)
+    
+    this.adjustMouseEvent(e)
+
+    this.last_mouse_dragging = false
+    this.dragging_canvas = false
+  }
 
   processMouseWheel(e) {
     if (!this.graph) return
@@ -292,6 +379,11 @@ class GraphCanvas {
     this.graph.change()
   }
 
+  /**
+   *
+   * @param {*} e
+   * @localX 相对canvas容器的位置
+   */
   adjustMouseEvent(e) {
     if (this.canvas) {
       var b = this.canvas.getBoundingClientRect()
@@ -330,6 +422,10 @@ class GraphCanvas {
 
   getCanvasWindow() {
     return window
+  }
+
+  clear() {
+    this.last_mouse = [0, 0]
   }
 
   setDirty(fgcanvas, bgcanvas) {
