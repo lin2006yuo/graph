@@ -45,7 +45,7 @@ eg: 设起始点为 a1(x, y), 缩放比为 n, 则缩放后的点为 a2(nx, ny)
 最终解: x -> (x - nx)/n = `x/n - x`  
  y -> (y - ny)/n = `y/n -y`
 
-### 拖拽 [demo](https://graph-three.vercel.app/test/scale/index.html)
+### 拖拽 [demo](https://graph-three.vercel.app/test/drag/index.html)
 
 **拖拽两种实现方式**
 
@@ -81,5 +81,5 @@ offset[1] += delta[1]
 1. 元素  
 方法1、方法2
 2. 画布  
-拖拽画布通过`translate`方法实现，`translate`的转换原点`translate-origin`固定为canvas左上角(0,0)。如果用方法1实现拖拽，第二次拖拽会出现不符合预期的结果❌[demo](https://graph-three.vercel.app/test/drag/error.html)，原因是转换原点始终为(0,0)，第二次拖拽转换原点的值应该为上一次`translate`的值。  
+拖拽画布通过`translate`方法实现，`translate`的转换原点`translate-origin`固定为canvas左上角(0,0)。如果用方法1实现拖拽，第二次拖拽会出现不符合预期的结果❌[demo](https://graph-three.vercel.app/test/drag/error.html)，原因是转换原点始终为(0,0)，第二次拖拽转换原点应该为上一次`translate`的值。  
 ∴画布拖拽使用方法2，[demo](https://graph-three.vercel.app/test/drag/index.html)
