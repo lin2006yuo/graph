@@ -1,4 +1,4 @@
-## canvas流程图
+## 流程图
 
 [preview](https://graph.lin2006yuo.vercel.app/)  
 发育中...  
