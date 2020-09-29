@@ -81,7 +81,6 @@ class DragAndScale {
     let new_center = this.converCanvasToOffset(zooming_center)
 
     let delta_offset = [new_center[0] - center[0], new_center[1] - center[1]]
-
     this.offset[0] += delta_offset[0]
     this.offset[1] += delta_offset[1]
   }
@@ -93,6 +92,7 @@ class DragAndScale {
   }
   toCanvasContext(ctx) {
     ctx.scale(this.scale, this.scale)
+    console.log(this.offset)
     ctx.translate(this.offset[0], this.offset[1])
   }
 }
@@ -259,10 +259,11 @@ class GraphCanvas {
         if (pattern) {
           ctx.fillStyle = pattern
           ctx.fillRect(
-            this.visible_area[0],
-            this.visible_area[1],
-            this.visible_area[2],
-            this.visible_area[3]
+            // this.visible_area[0],
+            // this.visible_area[1],
+            // this.visible_area[2],
+            // this.visible_area[3]
+            0,0,500,500
           )
           ctx.fillStyle = "transparent"
         }

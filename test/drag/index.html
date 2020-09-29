@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Drag</title>
+    <link rel="stylesheet" href="../style.css" />
+    <script src="../size.js"></script>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+      let { canvas, width: canvasWidth, height: canvasHeight } = new KSize(
+        "canvas"
+      )
+      let ctx = canvas.getContext("2d")
+      let img = new Image()
+      img.src = "../blackhold.jpg"
+      img.onload = function () {
+        drawImage(ctx, img)
+      }
+      let imgX = 20
+      let imgY = 20
+
+      let mouse = [0, 0]
+      let last_mouse = [0, 0]
+      let delta = [0, 0]
+      let translate = [0, 0]
+      canvas.addEventListener("mousedown", processMouseDown)
+      window.addEventListener("mouseup", processMouseUp)
+
+      function processMouseDown(e) {
+        // mouse[0] = e.offsetX
+        // mouse[1] = e.offsetY
+        last_mouse[0] = e.offsetX
+        last_mouse[1] = e.offsetY
+        window.addEventListener("mousemove", processMouseMove)
+      }
+      function processMouseMove(e) {
+        mouse[0] = e.offsetX
+        mouse[1] = e.offsetY
+        delta = [mouse[0] - last_mouse[0], mouse[1] - last_mouse[1]]
+        console.log(delta)
+        last_mouse[0] = mouse[0]
+        last_mouse[1] = mouse[1]
+        translate[0] = delta[0]
+        translate[1] = delta[1]
+        // imgX += delta[0]
+        // imgY += delta[1]
+        drawImage(ctx, img)
+      }
+      function processMouseUp() {
+        window.removeEventListener("mousemove", processMouseMove)
+      }
+
+      function drawImage(ctx, img) {
+        if (ctx) {
+          ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+          // ctx.save()
+          console.log(translate)
+          ctx.translate(translate[0], translate[1])
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            img.width,
+            img.height,
+            imgX,
+            imgY,
+            canvasWidth - 100,
+            canvasHeight - 100
+          )
+          // ctx.restore()
+        }
+      }
+    </script>
+  </body>
+</html>
