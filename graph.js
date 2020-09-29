@@ -99,6 +99,18 @@ class DragAndScale {
 class GraphCanvas {
   static DEFAULT_BACKGROUND_IMAGE = ""
   // "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAQBJREFUeNrs1rEKwjAUhlETUkj3vP9rdmr1Ysammk2w5wdxuLgcMHyptfawuZX4pJSWZTnfnu/lnIe/jNNxHHGNn//HNbbv+4dr6V+11uF527arU7+u63qfa/bnmh8sWLBgwYJlqRf8MEptXPBXJXa37BSl3ixYsGDBMliwFLyCV/DeLIMFCxYsWLBMwSt4Be/NggXLYMGCBUvBK3iNruC9WbBgwYJlsGApeAWv4L1ZBgsWLFiwYJmCV/AK3psFC5bBggULloJX8BpdwXuzYMGCBctgwVLwCl7Be7MMFixYsGDBsu8FH1FaSmExVfAxBa/gvVmwYMGCZbBg/W4vAQYA5tRF9QYlv/QAAAAASUVORK5CYII="
+  static active_canvas = null
+
+  static onMenuAdd() {
+    let canvas = GraphCanvas.active_canvas
+    let window = canvas.getCanvasWindow()
+    let graph = canvas.graph
+
+    if(!graph) return 
+
+    // let values = 
+  }
+
   constructor(canvas, graph) {
     this.bgctx = null
     this.bgcanvas = null
@@ -126,8 +138,11 @@ class GraphCanvas {
     this.clear()
     this.startRendering()
   }
+
   setCanvas(canvas, skip_events) {
     this.canvas = canvas
+    GraphCanvas.active_canvas = this.canvas
+
     this.ds.element = canvas
     canvas.className += " kgraphcanvas"
     canvas.data = this
@@ -259,11 +274,10 @@ class GraphCanvas {
         if (pattern) {
           ctx.fillStyle = pattern
           ctx.fillRect(
-            // this.visible_area[0],
-            // this.visible_area[1],
-            // this.visible_area[2],
-            // this.visible_area[3]
-            0,0,500,500
+            this.visible_area[0],
+            this.visible_area[1],
+            this.visible_area[2],
+            this.visible_area[3]
           )
           ctx.fillStyle = "transparent"
         }
@@ -319,16 +333,23 @@ class GraphCanvas {
       true
     )
 
-    let clicking_canvas_bg = true
-    // 点击bg则为拖拽
-    if (clicking_canvas_bg) {
-      this.dragging_canvas = true
-    }
+    // 左键
+    if (e.which === 1) {
+      let clicking_canvas_bg = true
+      // 点击bg则为拖拽
+      if (clicking_canvas_bg) {
+        this.dragging_canvas = true
+      }
 
-    this.last_mouse[0] = e.localX
-    this.last_mouse[1] = e.localY
-    this.last_mouseclick = Graph.getTime()
-    this.last_mouse_dragging = true
+      this.last_mouse[0] = e.localX
+      this.last_mouse[1] = e.localY
+      this.last_mouseclick = Graph.getTime()
+      this.last_mouse_dragging = true
+    } else if (e.which === 3) {
+      // 右键 - 菜单栏
+      // TODO: node
+      this.processContextMenu(null, e)
+    }
   }
 
   processMouseMove(e) {
@@ -350,16 +371,16 @@ class GraphCanvas {
       this.dirty_canvas = true
       this.dirty_bgcanvas = true
     }
-    e.preventDefault();
+    e.preventDefault()
   }
 
   processMouseUp(e) {
-    if(!this.graph) return 
+    if (!this.graph) return
     let ref_window = this.getCanvasWindow()
-    ref_window.removeEventListener('mousemove', this._mousemove_callback, true)
-    this.canvas.addEventListener('mousemove', this._mousemove_callback, true)
-    ref_window.removeEventListener('mouseup', this._mouseup_callback, true)
-    
+    ref_window.removeEventListener("mousemove", this._mousemove_callback, true)
+    this.canvas.addEventListener("mousemove", this._mousemove_callback, true)
+    ref_window.removeEventListener("mouseup", this._mouseup_callback, true)
+
     this.adjustMouseEvent(e)
 
     this.last_mouse_dragging = false
@@ -378,6 +399,31 @@ class GraphCanvas {
     }
     this.ds.changeScale(scale, [e.localX, e.localY])
     this.graph.change()
+  }
+
+  processContextMenu(node, event) {
+    let canvas = this.canvas
+    let ref_window = canvas.getCanvasWindow()
+
+    // 点击节点
+    if (node) {
+    } else {
+      // 点击bg
+      // 菜单信息
+      let menu_info = this.getCanvasMenuOptions()
+    }
+  }
+
+  getCanvasMenuOptions() {
+    let option = null
+    options = [
+      {
+        content: "添加节点",
+        has_submenu: true,
+        callback: GraphCanvas.onMenuAdd,
+      },
+    ]
+    return
   }
 
   /**
