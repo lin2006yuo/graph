@@ -1,4 +1,7 @@
-class Graph {
+import ContextMenu from './context_menu.mjs'
+
+
+export class Graph {
   constructor() {}
   static getTime = function () {
     return Date.now.bind(Date)
@@ -31,6 +34,7 @@ class Graph {
   }
   getTime() {}
 }
+
 class DragAndScale {
   constructor() {
     this.visible_area = new Float32Array(4)
@@ -96,7 +100,8 @@ class DragAndScale {
     ctx.translate(this.offset[0], this.offset[1])
   }
 }
-class GraphCanvas {
+
+export class GraphCanvas {
   static DEFAULT_BACKGROUND_IMAGE = ""
   // "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAQBJREFUeNrs1rEKwjAUhlETUkj3vP9rdmr1Ysammk2w5wdxuLgcMHyptfawuZX4pJSWZTnfnu/lnIe/jNNxHHGNn//HNbbv+4dr6V+11uF527arU7+u63qfa/bnmh8sWLBgwYJlqRf8MEptXPBXJXa37BSl3ixYsGDBMliwFLyCV/DeLIMFCxYsWLBMwSt4Be/NggXLYMGCBUvBK3iNruC9WbBgwYJlsGApeAWv4L1ZBgsWLFiwYJmCV/AK3psFC5bBggULloJX8BpdwXuzYMGCBctgwVLwCl7Be7MMFixYsGDBsu8FH1FaSmExVfAxBa/gvVmwYMGCZbBg/W4vAQYA5tRF9QYlv/QAAAAASUVORK5CYII="
   static active_canvas = null

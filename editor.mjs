@@ -1,4 +1,6 @@
-class Editor {
+import { Graph, GraphCanvas } from './src/graph.mjs'
+
+export default class Editor {
   constructor(container_id, options) {
     this.graph = null
     this.graphcanvas = null
