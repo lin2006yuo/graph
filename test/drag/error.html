@@ -30,8 +30,6 @@
       window.addEventListener("mouseup", processMouseUp)
 
       function processMouseDown(e) {
-        // mouse[0] = e.offsetX
-        // mouse[1] = e.offsetY
         last_mouse[0] = e.offsetX
         last_mouse[1] = e.offsetY
         window.addEventListener("mousemove", processMouseMove)
@@ -40,12 +38,8 @@
         mouse[0] = e.offsetX
         mouse[1] = e.offsetY
         delta = [mouse[0] - last_mouse[0], mouse[1] - last_mouse[1]]
-        last_mouse[0] = mouse[0]
-        last_mouse[1] = mouse[1]
-        translate[0] += delta[0]
-        translate[1] += delta[1]
-        // imgX = delta[0]
-        // imgY = delta[1]
+        translate[0] = delta[0]
+        translate[1] = delta[1]
         drawImage(ctx, img)
       }
       function processMouseUp() {
