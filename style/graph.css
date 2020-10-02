@@ -1,0 +1,35 @@
+.graph.contextmenu {
+  font-family: Tahoma, sans-serif;
+  position: fixed;
+  top: 100px;
+  left: 100px;
+  min-width: 100px;
+  color: #aaf;
+  padding: 0;
+  box-shadow: 0 0 10px black !important;
+  background-color: #2e2e2e !important;
+  z-index: 10;
+}
+
+.graph.contextmenu .menu-entry {
+  margin: 2px;
+  padding: 2px;
+
+  font-size: 12px;
+  color: #aaa;
+  margin: 2px;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+.graph .menu-entry:hover:not(.disabled):not(.separator) {
+  background-color: #444 !important;
+  color: #eee;
+  transition: all 0.2s;
+}
+
+.graph .menu-entry.has_submenu {
+  border-right: 2px solid cyan;
+}
