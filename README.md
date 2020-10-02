@@ -5,7 +5,7 @@
 **bg**  
 zoom - done  
 drag - done
-
+menu -done
 ---
 
 ## mark
@@ -49,7 +49,7 @@ eg: 设起始点为 a1(x, y), 缩放比为 n, 则缩放后的点为 a2(nx, ny)
 
 **拖拽两种实现方式**
 
-1. 记录点击时坐标 a1动后的坐标 a2(x2, y2), 得出偏移值(x2 - x1, y2 - y1), 元素坐标设置为偏移值
+1. 记录点击时坐标 a1(x1, y1)，移动后的坐标 a2(x2, y2), 得出偏移值(x2 - x1, y2 - y1), 将元素坐标设置为偏移值
 
 ```javascript
 let offset = [0, 0]
@@ -62,7 +62,7 @@ offset[0] = delta[0]
 offset[1] = delta[1]
 ```
 
-2. 上一次移动时的坐标 a1(x1, y1), 移动后的坐标 a2(x2, y2), 得出偏移值(x2 - x1, y2 - y1), 元素坐标**累加**偏移值
+2. 上一次移动时的坐标 a1(x1, y1), 移动后的坐标 a2(x2, y2), 得出偏移值(x2 - x1, y2 - y1), 将元素坐标**累加**偏移值
 
 ```javascript
 let offset = [0, 0]
@@ -81,5 +81,5 @@ offset[1] += delta[1]
 1. 元素  
 方法1、方法2
 2. 画布  
-拖拽画布通过`translate`方法实现，`translate`的转换原点`translate-origin`固定为canvas左上角(0,0)。如果用方法1实现拖拽，第二次拖拽会出现不符合预期的结果❌[demo](https://graph-three.vercel.app/test/drag/error.html)，原因是转换原点始终为(0,0)，第二次拖拽转换原点应该为上一次`translate`的值。  
+拖拽画布通过`translate`方法实现，由于`translate`的转换原点`translate-origin`固定为canvas左上角(0,0)，如果用方法1实现拖拽，第二次拖拽会出现不符合预期的结果❌[demo](https://graph-three.vercel.app/test/drag/error.html)，原因是第二次拖拽转换原点应该为上一次`translate`的值， 但在这里转换原点始终为(0,0)。  
 ∴画布拖拽使用方法2，[demo](https://graph-three.vercel.app/test/drag/index.html)
