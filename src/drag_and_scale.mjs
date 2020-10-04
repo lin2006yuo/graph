@@ -41,20 +41,20 @@ class DragAndScale {
     let rect = this.element.getBoundingClientRect()
     if (!rect) return
     zooming_center = zooming_center || [rect.width * 0.5, rect.height * 0.5]
-    let center = this.converCanvasToOffset(zooming_center)
+    let center = this.convertCanvasToOffset(zooming_center)
 
     this.scale = value
 
-    let new_center = this.converCanvasToOffset(zooming_center)
+    let new_center = this.convertCanvasToOffset(zooming_center)
 
     let delta_offset = [new_center[0] - center[0], new_center[1] - center[1]]
     this.offset[0] += delta_offset[0]
     this.offset[1] += delta_offset[1]
   }
-  converCanvasToOffset(pos, out) {
+  convertCanvasToOffset(pos, out) {
     out = out || [0, 0]
-    out[0] = pos[0] / this.scale
-    out[1] = pos[1] / this.scale
+    out[0] = pos[0] / this.scale - this.offset[0]
+    out[1] = pos[1] / this.scale - this.offset[1]
     return out
   }
   toCanvasContext(ctx) {

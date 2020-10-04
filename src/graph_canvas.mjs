@@ -1,6 +1,10 @@
 import ContextMenu from "./context_menu.mjs"
-import Graph from './graph.mjs'
-import DragAndScale from './drag_and_scale.mjs'
+import Graph from "./graph.mjs"
+import DragAndScale from "./drag_and_scale.mjs"
+import { overlapBounding } from "./utils.mjs"
+
+let temp_vec2 = new Float32Array(2)
+let tmp_area = new Float32Array(4)
 
 export class GraphCanvas {
   static DEFAULT_BACKGROUND_IMAGE = ""
@@ -13,17 +17,17 @@ export class GraphCanvas {
     let graph = canvas.graph
 
     if (!graph) return
-    
+
     let values = Graph.getNodeTypesCategories()
     let entries = []
     for (let i = 0; i < values.length; i++) {
-      const item = values[i];
-      if(item) {
+      const item = values[i]
+      if (item) {
         let name = item
         entries.push({
           value: name,
           content: name,
-          has_submenu: true
+          has_submenu: true,
         })
       }
     }
@@ -31,13 +35,22 @@ export class GraphCanvas {
     let menu = new ContextMenu(entries, {
       event: e,
       callback: inner_create,
-      parentMenu: pre_menu
+      parentMenu: pre_menu,
     })
 
     function inner_create(v) {
       let first_event = pre_menu.getFirstEvent()
       let node = Graph.createNode(v.value)
+
+      if (node) {
+        console.log(first_event)
+        const pos = canvas.convertEventToCanvasOffset(first_event)
+        node.pos = pos
+        canvas.graph.add(node)
+      }
     }
+
+    return false
   }
 
   constructor(canvas, graph) {
@@ -54,7 +67,12 @@ export class GraphCanvas {
     this.visible_area = this.ds.visible_area
     this.last_mouse_position = [0, 0]
     this.editor_alpha = 1
+    this.round_radius = 8
     this.mouse = [0, 0]
+    this.render_shadows = true
+    this.inner_text_font = "normal " + Graph.NODE_SUBTEXT_SIZE + "px Arial"
+
+    this.visible_nodes = []
 
     this.render_canvas_border = true
     this.set_canvas_dirty_on_mouse_event = true
@@ -136,11 +154,30 @@ export class GraphCanvas {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
     }
 
-    //draw bg canvas
+    // 绘制背景
     if (this.bgcanvas == this.canvas) {
       this.drawBackCanvas()
     } else {
       ctx.drawImage(this.bgcanvas, 0, 0)
+    }
+
+    // 绘制节点
+    if (this.graph) {
+      ctx.save()
+      this.ds.toCanvasContext(ctx)
+      let visible_nodes = this.computeVisibleNodes(null, this.visible_nodes)
+      for (let i = 0; i < visible_nodes.length; i++) {
+        const node = visible_nodes[i]
+        ctx.save()
+        console.log(node.pos)
+        ctx.translate(node.pos[0], node.pos[1])
+        this.drawNode(node, ctx)
+
+        ctx.restore()
+        // console.log(node)
+      }
+
+      ctx.restore()
     }
 
     //info widget
@@ -225,6 +262,99 @@ export class GraphCanvas {
     this.dirty_bgcanvas = false
     this.dirty_canvas = true
   }
+
+  drawNode(node, ctx) {
+    this.current_node = node
+
+    let color = node.color || node.constructor.color || Graph.NODE_DEFAULT_COLOR
+    let bgcolor =
+      node.bgcolor || node.constructor.color || Graph.NODE_DEFAULT_BGCOLOR
+
+    let low_quality = this.ds.scale < 0.6
+
+    let edit_alpha = this.editor_alpha
+    ctx.globalAlpha = edit_alpha
+
+    if (this.render_shadows) {
+      ctx.shadowColor = Graph.DEFAULT_SHADOW_COLOR
+      ctx.shadowOffsetX = 2 * this.ds.scale
+      ctx.shadowOffsetY = 2 * this.ds.scale
+      ctx.shadowBlur = 3 * this.ds.scale
+    } else {
+      ctx.shadowColor = "transparent"
+    }
+
+    let shape = node._shape || Graph.BOX_SHAPE
+    let size = temp_vec2
+    temp_vec2.set(node.size)
+    let horizontal = node.horizontal
+
+    this.drawNodeShape(
+      node,
+      ctx,
+      size,
+      color,
+      bgcolor,
+      node.is_selected,
+      node.mouseOver
+    )
+
+    ctx.shadowColor = "transparent"
+
+    ctx.textAlign = horizontal ? "center" : "left"
+    ctx.font = this.inner_text_font
+
+    ctx.globalAlpha = 1.0
+  }
+
+  drawNodeShape(node, ctx, size, fgcolor, bgcolor, selected, mouse_over) {
+    ctx.strokeStyle = fgcolor
+    ctx.fillStyle = bgcolor
+
+    let title_height = Graph.NODE_TITLE_HEIGHT
+    let low_quality = this.ds.scale < 0.5
+
+    let shape = node._shape || node.constructor.shape || Graph.ROUND_SHAPE
+    let title_mode = node.constructor.title_mode
+
+    let render_title = true
+    if (title_mode === Graph.TRANSPARENT_TITLE) {
+      render_title = false
+    } else if (title_mode === Graph.AUTOHIDE_TITLE && mouse_over) {
+      render_title = true
+    }
+
+    let area = tmp_area
+    area[0] = 0
+    area[1] = render_title ? -title_height : 0
+    area[2] = size[0] + 1
+    area[3] = render_title ? size[1] + title_height : size[1]
+
+    let old_alpha = ctx.globalAlpha
+
+    // 绘制节点
+    {
+      ctx.beginPath()
+      if (shape === Graph.BOX_SHAPE || low_quality) {
+        ctx.fillRect(area[0], area[1], area[2], area[3])
+      } else if (shape === Graph.ROUND_SHAPE || shape === Graph.CARD_SHAPE) {
+        console.log(area)
+        ctx.roundRect(
+          area[0],
+          area[1],
+          area[2],
+          area[3],
+          this.round_radius,
+          shape === Graph.CARD_SHAPE ? 0 : this.round_radius
+        )
+      } else if (shape === Graph.CIRCLE_SHALE) {
+        ctx.arc(size[0] * 0.5, size[1] * 0.5, size[0] * 0.5, 0, Math.PI * 2)
+      }
+
+      ctx.fill()
+    }
+  }
+
   bindEvents() {
     if (this._event_binded) {
       console.warn("GraphCanvas: events already binded")
@@ -354,9 +484,7 @@ export class GraphCanvas {
 
     let menu = new ContextMenu(menu_info, options, ref_window)
 
-    function inner_option_clicked(v, options, e) {
-
-    }
+    function inner_option_clicked(v, options, e) {}
   }
 
   getCanvasMenuOptions() {
@@ -400,6 +528,24 @@ export class GraphCanvas {
     e.canvasX = e.localX / this.ds.scale - this.ds.offset[0]
     e.canvasY = e.localY / this.ds.scale - this.ds.offset[1]
   }
+
+  computeVisibleNodes(nodes, out) {
+    let temp = new Float32Array(4)
+    let visible_nodes = out || []
+    visible_nodes.length = 0
+    nodes = nodes || this.graph._nodes
+    for (let i = 0; i < nodes.length; i++) {
+      const n = nodes[i]
+
+      if (!overlapBounding(this.visible_area, n.getBounding(temp))) {
+        continue
+      }
+
+      visible_nodes.push(n)
+    }
+    return nodes
+  }
+
   /** 根据父元素的宽高 */
   resize(width, height) {
     if (!width & !height) {
@@ -419,6 +565,18 @@ export class GraphCanvas {
 
   getCanvasWindow() {
     return window
+  }
+
+  convertEventToCanvasOffset(e) {
+    let rect = this.canvas.getBoundingClientRect()
+    return this.convertCanvasToOffset([
+      e.clientX - rect.left,
+      e.clientY - rect.top,
+    ])
+  }
+
+  convertCanvasToOffset(pos, out) {
+    return this.ds.convertCanvasToOffset(pos, out)
   }
 
   clear() {

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coord</title>
+    <link rel="stylesheet" href="../style.css" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="../size.js"></script>
+    <script src="./proxy.js"></script>
+    <script src="../minivue.js"></script>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="data">
+      <h3>偏移量</h3>
+      <div>translateX: {{translate[0]}}</div>
+      <div>translateY: {{translate[1]}}</div>
+    </div>
+
+    <script>
+      new MiniVue("#data")
+
+      let { canvas, width: canvasWidth, height: canvasHeight } = new KSize(
+        "canvas"
+      )
+      canvas.style.cursor = "grabbing"
+      const rect = canvas.getBoundingClientRect()
+      const canvasLeft = rect.left
+      const canvasTop = rect.top
+      let ctx = canvas.getContext("2d")
+      canvas.addEventListener("mousedown", processMousedown)
+      window.addEventListener("mouseup", processMouseup)
+
+      let last_mouse = [0, 0]
+      let translate = MiniVue.proxy("translate", [0, 0])
+
+      function processMousedown(e) {
+        adjustMouseEvent(e)
+        last_mouse[0] = e.localX
+        last_mouse[1] = e.localY
+        canvas.addEventListener("mousemove", processMousemove)
+      }
+
+      function processMousemove(e) {
+        adjustMouseEvent(e)
+        let cur_mouse = [e.localX, e.localY]
+        let delta = [cur_mouse[0] - last_mouse[0], cur_mouse[1] - last_mouse[1]]
+        last_mouse[0] = cur_mouse[0]
+        last_mouse[1] = cur_mouse[1]
+        translate[0] += delta[0]
+        translate[1] += delta[1]
+        draw()
+      }
+
+      function processMouseup() {
+        canvas.removeEventListener("mousemove", processMousemove)
+      }
+
+      function adjustMouseEvent(e) {
+        e.localX = e.clientX - canvasLeft
+        e.localY = e.clientY - canvasTop
+      }
+
+      draw()
+
+      function draw() {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+        ctx.save()
+        ctx.translate(translate[0], translate[1])
+        drawCoord()
+        ctx.restore()
+      }
+
+      function drawCoord() {
+        let lineWidth = 1
+        let centerHeight = canvasHeight / 2 - lineWidth
+        let centerWidth = canvasWidth / 2 - lineWidth
+        let step = 50
+        let fontSize = 14
+        // x轴
+        ctx.beginPath()
+        ctx.moveTo(0, centerHeight)
+        ctx.lineTo(canvasWidth, centerHeight)
+        ctx.lineWidth = lineWidth
+        ctx.stroke()
+        // 坐标
+        let countX = centerWidth / step
+        for (let i = 0; i < countX; i++) {
+          const x = i * step + centerWidth
+          ctx.beginPath()
+          ctx.moveTo(x, centerHeight)
+          ctx.font = fontSize + "px Georgia"
+          ctx.fillText(i * step, x - fontSize, centerHeight + fontSize)
+          ctx.lineTo(x, centerHeight - 10)
+          ctx.stroke()
+        }
+        for (let i = 0; i < countX; i++) {
+          const x = i * -step + centerWidth
+          ctx.beginPath()
+          ctx.moveTo(x, centerHeight)
+          ctx.font = fontSize + "px Georgia"
+          ctx.fillText(i * -step, x - fontSize, centerHeight + fontSize)
+          ctx.lineTo(x, centerHeight - 10)
+          ctx.stroke()
+        }
+        // y轴
+        ctx.beginPath()
+        ctx.moveTo(centerWidth, 0)
+        ctx.lineTo(centerWidth, canvasHeight)
+        ctx.lineWidth = lineWidth
+        ctx.stroke()
+        // 坐标
+        let countY = centerHeight / step
+        for (let i = 0; i < countY; i++) {
+          const y = i * -step + centerHeight
+          ctx.beginPath()
+          ctx.moveTo(centerWidth, y)
+          ctx.font = fontSize + "px Georgia"
+          ctx.fillText(i * step, centerWidth + 12, y + 3)
+          ctx.lineTo(centerWidth + 10, y)
+          ctx.stroke()
+        }
+        for (let i = 0; i < countY; i++) {
+          const y = i * step + centerHeight
+          ctx.beginPath()
+          ctx.moveTo(centerWidth, y)
+          ctx.font = fontSize + "px Georgia"
+          ctx.fillText(i * -step, centerWidth + 12, y + 3)
+          ctx.lineTo(centerWidth + 10, y)
+          ctx.stroke()
+        }
+      }
+    </script>
+  </body>
+</html>
