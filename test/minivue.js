@@ -35,14 +35,21 @@ class Watcher {
   update() {
     let oldValue = this.oldValue
     let newValue = this.getValue()
-    if (oldValue != newValue) {
+    if (oldValue != newValue || newValue === 0) {
       let reg = /\{\{(.+)\}\}/g
+      if(typeof newValue === 'object') {
+        newValue = newValue.value
+      }
       const newText = this.text.replace(reg, newValue)
       this.cb(newText, oldValue)
     }
   }
 }
 
+/**
+ * 基本类型  observer.value
+ * 对象类型  直接使用
+ */
 class MiniVue {
   static vm = null
   static observe = function (value) {
@@ -60,7 +67,11 @@ class MiniVue {
     })
   }
   static proxy = function (key, value) {
-    this.vm.$data[key] = MiniVue.observe(value)
+    if (typeof value === "object") {
+      this.vm.$data[key] = MiniVue.observe(value)
+    } else {
+      this.vm.$data[key] = MiniVue.observe({value})
+    }
     this.vm.init()
     return this.vm.$data[key]
   }
@@ -135,7 +146,7 @@ class MiniVue {
           }
         } else {
           node.textContent = text.replace(reg, this.$data[expr])
-          new Watcher(this, expr, (newValue, oldValue) => {
+          new Watcher(this, expr, text, (newValue, oldValue) => {
             node.textContent = newValue
           })
         }

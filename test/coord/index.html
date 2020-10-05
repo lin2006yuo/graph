@@ -13,13 +13,20 @@
   <body>
     <canvas id="canvas"></canvas>
     <div id="data">
+      <button id="reset">重置</button>
       <h3>偏移量</h3>
-      <div>translateX: {{translate[0]}}</div>
-      <div>translateY: {{translate[1]}}</div>
+      <div>offsetX = translateX: {{translate[0]}}</div>
+      <div>offsetY = translateY: {{translate[1]}}</div>
+      <h3>缩放值</h3>
+      <div>scale: {{scale}}</div>
     </div>
 
     <script>
-      new MiniVue("#data")
+      let { $data } = new MiniVue("#data")
+      let button = document.getElementById("reset")
+      button.addEventListener("click", () => {
+        reset()
+      })
 
       let { canvas, width: canvasWidth, height: canvasHeight } = new KSize(
         "canvas"
@@ -30,10 +37,17 @@
       const canvasTop = rect.top
       let ctx = canvas.getContext("2d")
       canvas.addEventListener("mousedown", processMousedown)
+      canvas.addEventListener("mousewheel", processMouseWheel)
       window.addEventListener("mouseup", processMouseup)
 
       let last_mouse = [0, 0]
       let translate = MiniVue.proxy("translate", [0, 0])
+
+      function reset() {
+        translate[0] = 0
+        translate[1] = 0
+        draw()
+      }
 
       function processMousedown(e) {
         adjustMouseEvent(e)
@@ -55,6 +69,16 @@
 
       function processMouseup() {
         canvas.removeEventListener("mousemove", processMousemove)
+      }
+
+      let scale = MiniVue.proxy("scale", 1)
+      function processMouseWheel(e) {
+        e.preventDefault()
+        if (e.wheelDelta > 0) {
+          scale.value *= 1.1
+        } else {
+          scale.value *= 1 / 1.1
+        }
       }
 
       function adjustMouseEvent(e) {
@@ -79,49 +103,59 @@
         let step = 50
         let fontSize = 14
         // x轴
+        // -translate[0] 无限长
         ctx.beginPath()
-        ctx.moveTo(0, centerHeight)
-        ctx.lineTo(canvasWidth, centerHeight)
+        ctx.moveTo(0 - translate[0], centerHeight)
+        ctx.lineTo(canvasWidth - translate[0], centerHeight)
         ctx.lineWidth = lineWidth
         ctx.stroke()
         // 坐标
-        let countX = centerWidth / step
-        for (let i = 0; i < countX; i++) {
+        // -translate[0] 无限步数
+        let countPX = (centerWidth - translate[0]) / step
+        for (let i = 0; i < countPX; i++) {
           const x = i * step + centerWidth
           ctx.beginPath()
+
           ctx.moveTo(x, centerHeight)
+          ctx.lineTo(x, centerHeight - 10)
+
           ctx.font = fontSize + "px Georgia"
           ctx.fillText(i * step, x - fontSize, centerHeight + fontSize)
-          ctx.lineTo(x, centerHeight - 10)
           ctx.stroke()
         }
-        for (let i = 0; i < countX; i++) {
+        let countNX = (centerWidth + translate[0]) / step
+        for (let i = 0; i < countNX; i++) {
           const x = i * -step + centerWidth
           ctx.beginPath()
+
           ctx.moveTo(x, centerHeight)
+          ctx.lineTo(x, centerHeight - 10)
+
           ctx.font = fontSize + "px Georgia"
           ctx.fillText(i * -step, x - fontSize, centerHeight + fontSize)
-          ctx.lineTo(x, centerHeight - 10)
           ctx.stroke()
         }
         // y轴
         ctx.beginPath()
-        ctx.moveTo(centerWidth, 0)
-        ctx.lineTo(centerWidth, canvasHeight)
+        ctx.moveTo(centerWidth, 0 - translate[1])
+        ctx.lineTo(centerWidth, canvasHeight - translate[1])
         ctx.lineWidth = lineWidth
         ctx.stroke()
         // 坐标
-        let countY = centerHeight / step
-        for (let i = 0; i < countY; i++) {
+        let countPY = (centerHeight + translate[1]) / step
+        for (let i = 0; i < countPY; i++) {
           const y = i * -step + centerHeight
           ctx.beginPath()
           ctx.moveTo(centerWidth, y)
+          ctx.lineTo(centerWidth + 10, y)
+
           ctx.font = fontSize + "px Georgia"
           ctx.fillText(i * step, centerWidth + 12, y + 3)
-          ctx.lineTo(centerWidth + 10, y)
+
           ctx.stroke()
         }
-        for (let i = 0; i < countY; i++) {
+        let countNY = (centerHeight - translate[1]) / step
+        for (let i = 0; i < countNY; i++) {
           const y = i * step + centerHeight
           ctx.beginPath()
           ctx.moveTo(centerWidth, y)
