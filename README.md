@@ -87,6 +87,52 @@ offset[1] += delta[1]
 
 ### 坐标系统 [demo](https://graph-three.vercel.app/test/coord/index.html)
 
+1. 拖拽  
+拖拽`方法二`的位移差除以`scale`再累加
+```javascript
+let offset = [0, 0]
+let last_mouse = [x1, y1]
+let cur_mouse = [x2, y2]
+
+let delta = [x2 - x1, y2 - y1]
+// 刷新上次移动时的坐标
+last_mouse[0] = cur_mouse[0]
+last_mouse[1] = cur_mouse[1]
+// 累加， 因为偏移值是根据上一次状态
+// delta除以scale再做累加
+offset[0] += delta[0] / scale
+offset[1] += delta[1] / scale
+
+// draw
+ctx.scale(scale, scale)
+ctx.translate(offset[0], offset[1])
+```
+2. 缩放  
+前后两次缩放的值除以`scale`再减`translate`，然后做差累加
+```javascript
+let _scale = 1
+function pos(pos) {
+    let out = [0,0]
+    out[0] = pos[0] / _scale - translate[0]
+    out[1] = pos[1] / _scale - translate[1]
+    return out
+}
+
+old_local = pos([x, y])
+_scale = new_scale
+new_local = pos([x, y])
+let delta = [
+    new_local[0] - old_local[0], 
+    new_local[1] - old_local[1]
+]
+offset[0] += delta[0]
+offset[1] += delta[1]
+
+// draw
+ctx.scale(scale, scale)
+ctx.translate(offset[0], offset[1])
+```
+
 ### 阻止右键默认菜单
 `mouseup` `contextmenu` `mousedown` 配合使用
 ``` javascript

@@ -169,7 +169,6 @@ export class GraphCanvas {
       for (let i = 0; i < visible_nodes.length; i++) {
         const node = visible_nodes[i]
         ctx.save()
-        console.log(node.pos)
         ctx.translate(node.pos[0], node.pos[1])
         this.drawNode(node, ctx)
 
@@ -195,6 +194,8 @@ export class GraphCanvas {
       canvas.width = this.canvas.width
       canvas.height = this.canvas.height
     }
+
+    console.log(this.ds.offset)
 
     if (!this.bgctx) {
       this.bgctx = this.bgcanvas.getContext("2d")
