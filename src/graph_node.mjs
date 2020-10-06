@@ -63,8 +63,22 @@ class GraphNode {
     out[1] = this.pos[1] - Graph.NODE_TITLE_HEIGHT
     out[2] = this.size[0] + 4
     out[3] = this.size[1] + Graph.NODE_TITLE_HEIGHT
-    
+
     return out
+  }
+
+  isPointInside(x, y, margin, skip_title) {
+    margin = margin || 0
+    let margin_top = Graph.NODE_TITLE_HEIGHT
+    if (
+      this.pos[0] - margin < x &&
+      this.pos[0] + this.size[0] + margin > x &&
+      this.pos[1] - margin_top - margin < y &&
+      this.pos[1] + this.size[1] + margin > y
+    ) {
+      return true
+    }
+    return false
   }
 
   computedSize() {

@@ -23,7 +23,7 @@ class Graph {
   static Nodes = {}
 
   static getTime = function () {
-    return Date.now.bind(Date)
+    return new Date().getTime()
   }
 
   static getNodeTypesCategories = function () {
@@ -153,8 +153,7 @@ class Graph {
 
   add(node, skip_computed_order) {
     if (!node) return
-
-    if (node.id === null || node.id === -1) {
+    if (!node.id || node.id === -1) {
       node.id = ++this.last_node_id
     } else if (this.last_node_id < node.id) {
       this.last_node_id = node.id
@@ -184,6 +183,18 @@ class Graph {
     }
     this.list_of_graphcanvas.push(graphcanvas)
   }
+
+  getNodeOnPos(x, y,nodes_list,margin) {
+    nodes_list = nodes_list || this._nodes
+    for (let i = nodes_list.length - 1; i >= 0; i--) {
+      const n = nodes_list[i];
+      if(n.isPointInside(x, y, margin)) {
+        return n
+      }
+    }
+    return null
+  }
+
   detachCanvas(graphcanvas) {}
   change() {
     this.sendActionToCanvas("setDirty", [true, true])

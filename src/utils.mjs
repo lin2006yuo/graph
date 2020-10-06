@@ -9,3 +9,11 @@ export function overlapBounding(a, b) {
   }
   return true
 }
+
+// 是否点击到node放大区域
+export function isInsideRectangle(x, y, left, top, width, height) {
+  if (left < x && left + width > x && top < y && top + height > y) {
+      return true;
+  }
+  return false;
+}

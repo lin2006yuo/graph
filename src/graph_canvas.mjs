@@ -1,7 +1,7 @@
 import ContextMenu from "./context_menu.mjs"
 import Graph from "./graph.mjs"
 import DragAndScale from "./drag_and_scale.mjs"
-import { overlapBounding } from "./utils.mjs"
+import { overlapBounding, isInsideRectangle } from "./utils.mjs"
 
 let temp_vec2 = new Float32Array(2)
 let tmp_area = new Float32Array(4)
@@ -43,7 +43,6 @@ export class GraphCanvas {
       let node = Graph.createNode(v.value)
 
       if (node) {
-        console.log(first_event)
         const pos = canvas.convertEventToCanvasOffset(first_event)
         node.pos = pos
         canvas.graph.add(node)
@@ -71,6 +70,9 @@ export class GraphCanvas {
     this.mouse = [0, 0]
     this.render_shadows = true
     this.inner_text_font = "normal " + Graph.NODE_SUBTEXT_SIZE + "px Arial"
+    this.selected_nodes = {}
+    this.current_node = null
+    this.resizing_node = null
 
     this.visible_nodes = []
 
@@ -173,7 +175,6 @@ export class GraphCanvas {
         this.drawNode(node, ctx)
 
         ctx.restore()
-        // console.log(node)
       }
 
       ctx.restore()
@@ -194,8 +195,6 @@ export class GraphCanvas {
       canvas.width = this.canvas.width
       canvas.height = this.canvas.height
     }
-
-    console.log(this.ds.offset)
 
     if (!this.bgctx) {
       this.bgctx = this.bgcanvas.getContext("2d")
@@ -327,7 +326,7 @@ export class GraphCanvas {
 
     let area = tmp_area
     area[0] = 0
-    area[1] = render_title ? -title_height : 0
+    area[1] = render_title ? -title_height : 0 //y
     area[2] = size[0] + 1
     area[3] = render_title ? size[1] + title_height : size[1]
 
@@ -339,7 +338,6 @@ export class GraphCanvas {
       if (shape === Graph.BOX_SHAPE || low_quality) {
         ctx.fillRect(area[0], area[1], area[2], area[3])
       } else if (shape === Graph.ROUND_SHAPE || shape === Graph.CARD_SHAPE) {
-        console.log(area)
         ctx.roundRect(
           area[0],
           area[1],
@@ -353,6 +351,29 @@ export class GraphCanvas {
       }
 
       ctx.fill()
+    }
+
+    if (selected) {
+      ctx.lineWidth = 1
+      ctx.globalAlpha = 0.8
+      ctx.beginPath()
+      if (shape === Graph.BOX_SHAPE) {
+        ctx.rect(-6 + area[0], -6 + area[1], 12 + area[2], 12 + area[3])
+      } else if (shape === Graph.ROUND_SHAPE) {
+        ctx.roundRect(
+          -6 + area[0],
+          -6 + area[1],
+          12 + area[2],
+          12 + area[3],
+          this.round_radius * 2
+        )
+      } else if (shape === Graph.CIRCLE_SHALE) {
+        ctx.arc(size[0] * 0.5, size[1] * 0.5, size[0] * 0.5 + 6, 0, Math.PI * 2)
+      }
+      ctx.strokeStyle = "#FFF"
+      ctx.stroke()
+      ctx.strokeStyle = fgcolor
+      ctx.globalAlpha = 1
     }
   }
 
@@ -380,6 +401,13 @@ export class GraphCanvas {
     this.adjustMouseEvent(e)
 
     let ref_window = this.getCanvasWindow()
+    let skip_action = false
+    let node = this.graph.getNodeOnPos(
+      e.canvasX,
+      e.canvasY,
+      this.visible_nodes,
+      5
+    )
 
     // 移除canvas的mouse事件，用window监听，当鼠标再canvas外仍能拖拽
     this.canvas.removeEventListener("mousemove", this._mouseup_callback)
@@ -394,12 +422,52 @@ export class GraphCanvas {
       true
     )
 
-    // 清楚菜单栏
+    let now = Graph.getTime()
+    let is_double_click = now - this.last_mouseclick < 300
+
+    // 清除菜单栏
     ContextMenu.closeAllContextMenus()
 
     // 左键
     if (e.which === 1) {
-      let clicking_canvas_bg = true
+      let clicking_canvas_bg = false
+      let block_drag_node = false
+
+      if (node && !skip_action) {
+        // 点击到node，将node移到最后
+        this.bringToFront(node)
+
+        // part1 node缩放
+        if (
+          !skip_action &&
+          isInsideRectangle(
+            e.canvasX,
+            e.canvasY,
+            node.pos[0] + node.size[0] - 5,
+            node.pos[1] + node.size[1] - 5,
+            10,
+            10
+          )
+        ) {
+          this.resizing_node = node
+          this.canvas.style.cursor = "se-resize"
+          skip_action = true
+        }
+
+        // part2 node 移动
+        if (!skip_action) {
+          if (!block_drag_node) {
+            this.node_dragged = node
+            if (!this.selected_nodes[node.id]) {
+              this.processNodeSelected(node, e)
+            }
+          }
+        }
+      } else {
+        // 拖拽bg
+        clicking_canvas_bg = true
+      }
+
       // 点击bg则为拖拽
       if (clicking_canvas_bg) {
         this.dragging_canvas = true
@@ -429,11 +497,64 @@ export class GraphCanvas {
     this.last_mouse = mouse
 
     e.dragging = this.last_mouse_dragging
+
     if (this.dragging_canvas) {
       this.ds.offset[0] += delta[0] / this.ds.scale
       this.ds.offset[1] += delta[1] / this.ds.scale
       this.dirty_canvas = true
       this.dirty_bgcanvas = true
+    } else {
+      var node = this.graph.getNodeOnPos(
+        e.canvasX,
+        e.canvasY,
+        this.visible_nodes
+      )
+
+      // mouse over
+      if (node) {
+        if (this.canvas) {
+          if (
+            isInsideRectangle(
+              e.canvasX,
+              e.canvasY,
+              node.pos[0] + node.size[0] - 5,
+              node.pos[1] + node.size[1] - 5,
+              10,
+              10
+            )
+          ) {
+            this.canvas.style.cursor = "se-resize"
+          } else {
+            this.canvas.style.cursor = "crosshair"
+          }
+        }
+      } else {
+        if (this.canvas) this.canvas.style.cursor = ""
+      }
+
+      // node被拖拽
+      if (this.node_dragged) {
+        for (let key in this.selected_nodes) {
+          let n = this.selected_nodes[key]
+          n.pos[0] += delta[0] / this.ds.scale
+          n.pos[1] += delta[1] / this.ds.scale
+        }
+        this.setDirty(true, true)
+      }
+
+      if (this.resizing_node) {
+        let desired_size = [
+          e.canvasX - this.resizing_node.pos[0],
+          e.canvasY - this.resizing_node.pos[1]
+        ]
+        let mini_size = this.resizing_node.computedSize()
+        desired_size[0] = Math.max(mini_size[0], desired_size[0])
+        desired_size[1] = Math.max(mini_size[1], desired_size[1])
+        this.resizing_node.setSize(desired_size)
+
+        this.canvas.style.cursor = 'se-resize'
+        this.setDirty(true, true)
+      }
     }
     e.preventDefault()
   }
@@ -445,7 +566,32 @@ export class GraphCanvas {
     this.canvas.addEventListener("mousemove", this._mousemove_callback, true)
     ref_window.removeEventListener("mouseup", this._mouseup_callback, true)
 
+    let now = Graph.getTime()
+    e.click_time = now - this.last_mouseclick
+
     this.adjustMouseEvent(e)
+
+    if (e.which === 1) {
+      let node = this.graph.getNodeOnPos(
+        e.canvasX,
+        e.canvasY,
+        this.visible_nodes
+      )
+
+      if (this.node_dragged) {
+        this.node_dragged.pos[0] = Math.round(this.node_dragged.pos[0])
+        this.node_dragged.pos[1] = Math.round(this.node_dragged.pos[1])
+        this.node_dragged = null
+        this.setDirty(true, true)
+      } else if (this.resizing_node) {
+        this.resizing_node = null
+        this.setDirty(true, true)
+      } else {
+        if (!node && e.click_time < 300) {
+          this.deselectAllNodes()
+        }
+      }
+    }
 
     this.last_mouse_dragging = false
     this.dragging_canvas = false
@@ -547,6 +693,51 @@ export class GraphCanvas {
     return nodes
   }
 
+  processNodeSelected(node, e) {
+    this.selectNode(node, e && e.shiftKey)
+  }
+
+  selectNode(node, add_to_current_selection) {
+    if (node === null) {
+      this.deselectAllNodes()
+    } else {
+      this.selectNodes([node], add_to_current_selection)
+    }
+  }
+
+  selectNodes(nodes, add_to_current_selection) {
+    if (!add_to_current_selection) {
+      this.deselectAllNodes()
+    }
+
+    nodes = nodes || this.graph._nodes
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (node.is_selected) {
+        continue
+      }
+      if (!node.is_selected && node.onSelected) {
+        node.onSelected()
+      }
+      node.is_selected = true
+      this.selected_nodes[node.id] = node
+    }
+    this.setDirty(true, true)
+  }
+
+  deselectAllNodes() {
+    if (!this.graph) return
+    let nodes = this.graph._nodes
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+      if (!node.is_selected) continue
+      node.is_selected = false
+    }
+    this.selected_nodes = {}
+    this.current_node = null
+    this.setDirty(true)
+  }
+
   /** 根据父元素的宽高 */
   resize(width, height) {
     if (!width & !height) {
@@ -576,11 +767,21 @@ export class GraphCanvas {
     ])
   }
 
+  bringToFront(node) {
+    let i = this.graph._nodes.indexOf(node)
+    if (i === -1) {
+      return
+    }
+    this.graph._nodes.splice(i, 1)
+    this.graph._nodes.push(node)
+  }
+
   convertCanvasToOffset(pos, out) {
     return this.ds.convertCanvasToOffset(pos, out)
   }
 
   clear() {
+    this.selected_nodes = {}
     this.last_mouse = [0, 0]
   }
 

@@ -29,6 +29,13 @@
       <div>y: {{translate[1]}}</div>
       <div>width: {{visibleWidth}}</div>
       <div>height: {{visibleHeight}}</div>
+      <h3>点击的位置</h3>
+      <h4>相对于canvas容器</h4>
+      <div>clickX: {{click.x}}</div>
+      <div>clickY: {{click.y}}</div>
+      <h4>相对于视图</h4>
+      <div>canvasX: {{canvas.x}}</div>
+      <div>canvasY: {{canvas.y}}</div>
     </div>
 
     <script>
@@ -43,6 +50,14 @@
             offset: new Float32Array(2),
             canvasWidth: 1,
             canvasHeight: 1,
+            click: {
+              x: 0,
+              y: 0,
+            },
+            canvas: {
+              x: 0,
+              y: 0,
+            },
           }
         },
         computed: {
@@ -51,7 +66,7 @@
           },
           visibleHeight() {
             return this.canvasHeight / this.scale
-          }
+          },
         },
         mounted() {
           let { canvas, width: canvasWidth, height: canvasHeight } = new KSize(
@@ -80,6 +95,10 @@
             this.adjustMouseEvent(e)
             this.last_mouse = [e.localX, e.localY]
             canvas.addEventListener("mousemove", this.processMousemove)
+            this.click.x = e.localX
+            this.click.y = e.localY
+            this.canvas.x = e.canvasX
+            this.canvas.y = e.canvasY
           },
           processMousemove(e) {
             this.adjustMouseEvent(e)
@@ -130,14 +149,20 @@
           adjustMouseEvent(e) {
             e.localX = e.clientX - this.canvasLeft
             e.localY = e.clientY - this.canvasTop
+
+            e.canvasX = e.localX / this.scale - this.translate[0]
+            e.canvasY = e.localY / this.scale - this.translate[1]
           },
 
           draw() {
-            this.ctx.save()
             this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
+            // 固定
+            this.ctx.strokeRect(600, 100, 100, 100)
             this.ctx.save()
             this.ctx.scale(this.scale, this.scale)
             this.ctx.translate(this.translate[0], this.translate[1])
+            // 跟随
+            this.ctx.strokeRect(100, 100, 100, 100)
             this.drawCoord()
             this.ctx.restore()
           },
@@ -230,7 +255,7 @@
           handleResetScale() {
             this.scale = 1
             this.draw()
-          }
+          },
         },
       })
     </script>
