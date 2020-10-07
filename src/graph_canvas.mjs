@@ -1,7 +1,7 @@
 import ContextMenu from "./context_menu.mjs"
 import Graph from "./graph.mjs"
 import DragAndScale from "./drag_and_scale.mjs"
-import { overlapBounding, isInsideRectangle } from "./utils.mjs"
+import { overlapBounding, isInsideRectangle, distance } from "./utils.mjs"
 
 let temp_vec2 = new Float32Array(2)
 let tmp_area = new Float32Array(4)
@@ -68,13 +68,26 @@ export class GraphCanvas {
     this.editor_alpha = 1
     this.round_radius = 8
     this.mouse = [0, 0]
+    this.graph_mouse = [0, 0]
+    this.canvas_mouse = this.graph_mouse
     this.render_shadows = true
     this.inner_text_font = "normal " + Graph.NODE_SUBTEXT_SIZE + "px Arial"
     this.selected_nodes = {}
     this.current_node = null
     this.resizing_node = null
+    this.connecting_node = null
+    this.connecting_pos = null
+    this.connections_width = 3
+    this.default_connection_color = {
+      input_off: "#778",
+      input_on: "#7F7",
+      output_off: "#778",
+      output_on: "#7F7",
+    }
+    this.links_render_mode = Graph.SPLINE_LINK
 
     this.visible_nodes = []
+    this.visible_links = []
 
     this.render_canvas_border = true
     this.set_canvas_dirty_on_mouse_event = true
@@ -168,13 +181,50 @@ export class GraphCanvas {
       ctx.save()
       this.ds.toCanvasContext(ctx)
       let visible_nodes = this.computeVisibleNodes(null, this.visible_nodes)
+
       for (let i = 0; i < visible_nodes.length; i++) {
         const node = visible_nodes[i]
         ctx.save()
         ctx.translate(node.pos[0], node.pos[1])
         this.drawNode(node, ctx)
-
         ctx.restore()
+      }
+
+      // link
+      if (this.connecting_pos !== null) {
+        ctx.lineWidth = this.connections_width
+        let link_color = Graph.CONNECTING_LINK_COLOR
+
+        this.renderLink(
+          ctx,
+          this.connecting_pos,
+          [this.graph_mouse[0], this.graph_mouse[1]],
+          null,
+          false,
+          null,
+          link_color,
+          this.connecting_output.dir || this.connecting_output.horizontal
+            ? Graph.DOWN
+            : Graph.RIGHT,
+          Graph.CENTER
+        )
+
+        ctx.beginPath()
+        if (
+          this.connecting_output.type === Graph.EVENT ||
+          this.connecting_output.shape === Graph.BOX_SHAPE
+        ) {
+          // TODO
+        } else {
+          ctx.arc(
+            this.connecting_pos[0],
+            this.connecting_pos[1],
+            4,
+            0,
+            Math.PI * 2
+          )
+        }
+        ctx.fill()
       }
 
       ctx.restore()
@@ -298,12 +348,73 @@ export class GraphCanvas {
       node.is_selected,
       node.mouseOver
     )
-
     ctx.shadowColor = "transparent"
+
+    ctx.textAlign = horizontal ? "center" : "right"
+    ctx.strokeStyle = "black"
+    ctx.font = this.inner_text_font
+
+    let render_text = true
+
+    let max_y = 0
+    let slot_pos = new Float32Array(2)
+
+    if (!node.flags.collapsed) {
+      if (node.inputs) {
+        for (let i = 0; i < node.inputs.length; i++) {
+          const slot = node.inputs[i]
+        }
+      }
+
+      if (node.outputs) {
+        for (let i = 0; i < node.outputs.length; i++) {
+          const slot = node.outputs[i]
+
+          ctx.globalAlpha = edit_alpha
+          // console.log(this.connecting_node)
+          if (this.connecting_node) {
+            ctx.globalAlpha = 0.4 * edit_alpha
+          }
+
+          let pos = node.getConnectionPos(false, i, slot_pos)
+          pos[0] -= node.pos[0]
+          pos[1] -= node.pos[1]
+          if (max_y < pos[1] + Graph.NODE_SLOT_HEIGHT * 0.5) {
+            max_y = pos[1] + Graph.NODE_SLOT_HEIGHT * 0.5
+          }
+
+          ctx.fillStyle =
+            slot.links && slot.links.length
+              ? slot.color_on || this.default_connection_color.output_on
+              : slot.color_off || this.default_connection_color.output_off
+
+          ctx.beginPath()
+
+          if (slot.shape === Graph.BOX_SHAPE) {
+          } else if (slot.shape === Graph.ARROW_SHAPE) {
+          } else {
+            ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2)
+          }
+
+          ctx.fill()
+          ctx.stroke()
+
+          if (render_text) {
+            let text = slot.label ? slot.label : slot.name
+            if (text) {
+              ctx.fillStyle = Graph.NODE_TEXT_COLOR
+              if (horizontal || slot.dir === Graph.UP) {
+              } else {
+                ctx.fillText(text, pos[0] - 10, pos[1] + 5)
+              }
+            }
+          }
+        }
+      }
+    }
 
     ctx.textAlign = horizontal ? "center" : "left"
     ctx.font = this.inner_text_font
-
     ctx.globalAlpha = 1.0
   }
 
@@ -402,6 +513,10 @@ export class GraphCanvas {
 
     let ref_window = this.getCanvasWindow()
     let skip_action = false
+    this.mouse[0] = e.localX
+    this.mouse[1] = e.localY
+    this.graph_mouse[0] = e.canvasX
+    this.graph_mouse[1] = e.canvasY
     let node = this.graph.getNodeOnPos(
       e.canvasX,
       e.canvasY,
@@ -452,6 +567,32 @@ export class GraphCanvas {
           this.resizing_node = node
           this.canvas.style.cursor = "se-resize"
           skip_action = true
+        } else {
+          if (node.outputs) {
+            for (let i = 0; i < node.outputs.length; i++) {
+              const output = node.outputs[i]
+              let link_pos = node.getConnectionPos(false, i)
+
+              if (
+                isInsideRectangle(
+                  e.canvasX,
+                  e.canvasY,
+                  link_pos[0] - 15,
+                  link_pos[1] - 10,
+                  30,
+                  20
+                )
+              ) {
+                this.connecting_node = node
+                this.connecting_output = output
+                this.connecting_pos = node.getConnectionPos(false, i)
+                this.connecting_slot = i
+
+                skip_action = true
+                break
+              }
+            }
+          }
         }
 
         // part2 node 移动
@@ -479,9 +620,10 @@ export class GraphCanvas {
       this.last_mouse_dragging = true
     } else if (e.which === 3) {
       // 右键 - 菜单栏
-      // TODO: node
       this.processContextMenu(null, e)
     }
+
+    this.graph.change()
   }
 
   processMouseMove(e) {
@@ -495,6 +637,8 @@ export class GraphCanvas {
     this.mouse[1] = mouse[1]
     let delta = [mouse[0] - this.last_mouse[0], mouse[1] - this.last_mouse[1]]
     this.last_mouse = mouse
+    this.graph_mouse[0] = e.canvasX
+    this.graph_mouse[1] = e.canvasY
 
     e.dragging = this.last_mouse_dragging
 
@@ -545,14 +689,14 @@ export class GraphCanvas {
       if (this.resizing_node) {
         let desired_size = [
           e.canvasX - this.resizing_node.pos[0],
-          e.canvasY - this.resizing_node.pos[1]
+          e.canvasY - this.resizing_node.pos[1],
         ]
         let mini_size = this.resizing_node.computedSize()
         desired_size[0] = Math.max(mini_size[0], desired_size[0])
         desired_size[1] = Math.max(mini_size[1], desired_size[1])
         this.resizing_node.setSize(desired_size)
 
-        this.canvas.style.cursor = 'se-resize'
+        this.canvas.style.cursor = "se-resize"
         this.setDirty(true, true)
       }
     }
@@ -583,6 +727,9 @@ export class GraphCanvas {
         this.node_dragged.pos[1] = Math.round(this.node_dragged.pos[1])
         this.node_dragged = null
         this.setDirty(true, true)
+      } else if (this.connecting_node) {
+        this.connecting_node = null
+        this.connecting_pos = null
       } else if (this.resizing_node) {
         this.resizing_node = null
         this.setDirty(true, true)
@@ -595,6 +742,8 @@ export class GraphCanvas {
 
     this.last_mouse_dragging = false
     this.dragging_canvas = false
+
+    this.graph.change()
   }
 
   processMouseWheel(e) {
@@ -632,6 +781,89 @@ export class GraphCanvas {
     let menu = new ContextMenu(menu_info, options, ref_window)
 
     function inner_option_clicked(v, options, e) {}
+  }
+
+  renderLink(
+    ctx, //ctx
+    a, // this.connecting_pos,
+    b, // [this.graph_mouse[0], this.graph_mouse[1]],
+    link, // null,
+    skip_border, //  false,
+    flow, // null,
+    color, // link_color,
+    start_dir, // Graph.RIGHT
+    end_dir, // Graph.CENTERs
+    num_sublines
+  ) {
+    if (link) {
+      this.visible_links.push(link)
+    }
+    start_dir = start_dir || Graph.RIGHT
+    end_dir = end_dir || Graph.LEFT
+
+    let dist = distance(a, b)
+
+    ctx.lineWidth = this.connections_width + 4
+    ctx.lineJoin = "round"
+    num_sublines = num_sublines || 1
+    if (num_sublines > 1) {
+      ctx.lineWidth = 0.5
+    }
+
+    ctx.beginPath()
+    for (let i = 0; i < num_sublines; i++) {
+      let offsety = (i - (num_sublines - 1) * 0.5) * 0.5
+      if (this.links_render_mode == Graph.SPLINE_LINK) {
+        ctx.moveTo(a[0], a[1] + offsety)
+        var start_offset_x = 0
+        var start_offset_y = 0
+        var end_offset_x = 0
+        var end_offset_y = 0
+        switch (start_dir) {
+          case Graph.LEFT:
+            start_offset_x = dist * -0.25
+            break
+          case Graph.RIGHT:
+            start_offset_x = dist * 0.25
+            break
+          case Graph.UP:
+            start_offset_y = dist * -0.25
+            break
+          case Graph.DOWN:
+            start_offset_y = dist * 0.25
+            break
+        }
+        switch (end_dir) {
+          case Graph.LEFT:
+            end_offset_x = dist * -0.25
+            break
+          case Graph.RIGHT:
+            end_offset_x = dist * 0.25
+            break
+          case Graph.UP:
+            end_offset_y = dist * -0.25
+            break
+          case Graph.DOWN:
+            end_offset_y = dist * 0.25
+            break
+        }
+        ctx.bezierCurveTo(
+          a[0] + start_offset_x,
+          a[1] + start_offset_y + offsety,
+          b[0] + end_offset_x,
+          b[1] + end_offset_y + offsety,
+          b[0],
+          b[1] + offsety
+        )
+      }
+    }
+
+    ctx.strokeStyle = "rgba(0,0,0,0.5)"
+    ctx.stroke()
+
+    ctx.lineWidth = this.connections_width;
+    ctx.fillStyle = ctx.strokeStyle = color;
+    ctx.stroke();
   }
 
   getCanvasMenuOptions() {
@@ -782,6 +1014,7 @@ export class GraphCanvas {
 
   clear() {
     this.selected_nodes = {}
+    this.connecting_node = null
     this.last_mouse = [0, 0]
   }
 

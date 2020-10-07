@@ -17,3 +17,9 @@ export function isInsideRectangle(x, y, left, top, width, height) {
   }
   return false;
 }
+
+export function distance(a, b) {
+  return Math.sqrt(
+      (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1])
+  );
+}

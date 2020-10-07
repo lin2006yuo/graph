@@ -57,6 +57,39 @@ class GraphNode {
     return o
   }
 
+  getConnectionPos(is_input, slot_number, out) {
+    out = out || new Float32Array(2)
+    let num_slot = 0
+
+    if (is_input && this.inputs) {
+    }
+    if (!is_input && this.outputs) {
+      num_slot = this.outputs.length
+    }
+
+    let offset = Graph.NODE_SLOT_HEIGHT * 0.5
+
+    if (this.flags.collapsed) {
+    }
+
+    if (!is_input && num_slot > slot_number && this.outputs[slot_number].pos) {
+      out[0] = this.pos[0] + this.outputs[slot_number].pos[0]
+      out[1] = this.pos[1] + this.outputs[slot_number].pos[1]
+      return out
+    }
+
+    if (is_input) {
+    } else {
+      out[0] = this.pos[0] + this.size[0] + 1 - offset
+    }
+    out[1] =
+      this.pos[1] +
+      (slot_number + 0.7) * Graph.NODE_SLOT_HEIGHT +
+      (this.constructor.slot_start_y || 0)
+
+    return out
+  }
+
   getBounding(out) {
     out = out || new Float32Array(4)
     out[0] = this.pos[0] - 4

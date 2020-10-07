@@ -10,9 +10,22 @@ class Graph {
   static NODE_WIDTH = 140
   static NODE_TITLE_HEIGHT = 30
   static NODE_SUBTEXT_SIZE = 12
+  static NODE_SLOT_HEIGHT = 20
+  static NODE_TEXT_COLOR = "#AAA"
   static NODE_DEFAULT_COLOR = "#333"
   static NODE_DEFAULT_BGCOLOR = "#353535"
   static DEFAULT_SHADOW_COLOR = "rgba(0,0,0,0.5)"
+  static CONNECTING_LINK_COLOR = "#AFA"
+
+  static STRAIGHT_LINK = 0
+  static LINEAR_LINK = 1
+  static SPLINE_LINK = 2
+
+  static UP = 1
+  static DOWN = 2
+  static LEFT = 3
+  static RIGHT = 4
+  static CENTER = 5
 
   static TRANSPARENT_TITLE = 2
   static AUTOHIDE_TITLE = 3
@@ -37,8 +50,16 @@ class Graph {
     base_class.prototype
     node = new base_class(title)
 
+    if (!node.size) {
+      node.size = node.computedSize()
+    }
+
     if (!node.pos) {
       node.pos = Graph.DEFAULT_POSITION.concat()
+    }
+
+    if (!node.flags) {
+      node.flags = {}
     }
 
     return node
@@ -184,11 +205,11 @@ class Graph {
     this.list_of_graphcanvas.push(graphcanvas)
   }
 
-  getNodeOnPos(x, y,nodes_list,margin) {
+  getNodeOnPos(x, y, nodes_list, margin) {
     nodes_list = nodes_list || this._nodes
     for (let i = nodes_list.length - 1; i >= 0; i--) {
-      const n = nodes_list[i];
-      if(n.isPointInside(x, y, margin)) {
+      const n = nodes_list[i]
+      if (n.isPointInside(x, y, margin)) {
         return n
       }
     }
