@@ -84,7 +84,7 @@ export class GraphCanvas {
       output_off: "#778",
       output_on: "#7F7",
     }
-    this.links_render_mode = Graph.SPLINE_LINK
+    this.links_render_mode = Graph.STRAIGHT_LINK // LINEAR_LINK SPLINE_LINK STRAIGHT_LINK
 
     this.visible_nodes = []
     this.visible_links = []
@@ -225,6 +225,19 @@ export class GraphCanvas {
           )
         }
         ctx.fill()
+
+        ctx.fillStyle = "#ffcc00"
+        if (this._highlight_input) {
+          ctx.beginPath()
+          ctx.arc(
+            this._highlight_input[0],
+            this._highlight_input[1],
+            6,
+            0,
+            Math.PI * 2
+          )
+          ctx.fill()
+        }
       }
 
       ctx.restore()
@@ -362,10 +375,38 @@ export class GraphCanvas {
     if (!node.flags.collapsed) {
       if (node.inputs) {
         for (let i = 0; i < node.inputs.length; i++) {
-          const slot = node.inputs[i]
+          const slot = node.inputs[i] // {name: "obj", type: 0, link: null}
+
+          ctx.globalAlpha = edit_alpha
+
+          // if (this.connecting_node) {
+          //   ctx.globalAlpha = 0.4 * edit_alpha
+          // }
+
+          ctx.fillStyle =
+            slot.link !== null
+              ? slot.color_on || this.default_connection_color.input_on
+              : slot.color_off || this.default_connection_color.input_off
+
+          let pos = node.getConnectionPos(true, i, slot_pos)
+          pos[0] -= node.pos[0]
+          pos[1] -= node.pos[1]
+          if (max_y < pos[1] + Graph.NODE_SLOT_HEIGHT * 0.5) {
+            max_y = pos[1] + Graph.NODE_SLOT_HEIGHT * 0.5
+          }
+
+          ctx.beginPath()
+
+          if (slot.type === Graph.EVENT || slot.shape === Graph.BOX_SHAPE) {
+            // TODO
+          } else if (slot.shape == Graph.ARROW_SHAPE) {
+            // TODO
+          } else {
+            ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2)
+          }
+          ctx.fill()
         }
       }
-
       if (node.outputs) {
         for (let i = 0; i < node.outputs.length; i++) {
           const slot = node.outputs[i]
@@ -656,6 +697,18 @@ export class GraphCanvas {
 
       // mouse over
       if (node) {
+        if (this.connecting_node) {
+          let pos = this._highlight_input || [0, 0]
+          // 这个方法会修改pos
+          let slot = this.isOverNodeInput(node, e.canvasX, e.canvasY, pos)
+
+          if (slot !== -1 && node.inputs[slot]) {
+            this._highlight_input = pos
+          } else {
+            this._highlight_input = null
+          }
+        }
+
         if (this.canvas) {
           if (
             isInsideRectangle(
@@ -728,6 +781,20 @@ export class GraphCanvas {
         this.node_dragged = null
         this.setDirty(true, true)
       } else if (this.connecting_node) {
+        let node = this.graph.getNodeOnPos(
+          e.canvasX,
+          e.canvasY,
+          this.visible_nodes
+        )
+
+        if (node) {
+          let slot = this.isOverNodeInput(node, e.canvasX, e.canvasY)
+
+          if (slot !== -1) {
+            this.connecting_node.connect(this.connecting_slot, node, slot)
+          }
+        }
+
         this.connecting_node = null
         this.connecting_pos = null
       } else if (this.resizing_node) {
@@ -855,15 +922,79 @@ export class GraphCanvas {
           b[0],
           b[1] + offsety
         )
+      } else if (this.links_render_mode === Graph.LINEAR_LINK) {
+        ctx.moveTo(a[0], a[1] + offsety)
+        var start_offset_x = 0
+        var start_offset_y = 0
+        var end_offset_x = 0
+        var end_offset_y = 0
+        switch (start_dir) {
+          case Graph.LEFT:
+            start_offset_x = -1
+            break
+          case Graph.RIGHT:
+            start_offset_x = 1
+            break
+          case Graph.UP:
+            start_offset_y = -1
+            break
+          case Graph.DOWN:
+            start_offset_y = 1
+            break
+        }
+        switch (end_dir) {
+          case Graph.LEFT:
+            end_offset_x = -1
+            break
+          case Graph.RIGHT:
+            end_offset_x = 1
+            break
+          case Graph.UP:
+            end_offset_y = -1
+            break
+          case Graph.DOWN:
+            end_offset_y = 1
+            break
+        }
+        var l = 15
+        ctx.lineTo(
+          a[0] + start_offset_x * l,
+          a[1] + start_offset_y * l + offsety
+        )
+        ctx.lineTo(b[0] + end_offset_x * l, b[1] + end_offset_y * l + offsety)
+        ctx.lineTo(b[0], b[1] + offsety)
+      } else if (this.links_render_mode === Graph.STRAIGHT_LINK) {
+        ctx.moveTo(a[0], a[1])
+        var start_x = a[0]
+        var start_y = a[1]
+        var end_x = b[0]
+        var end_y = b[1]
+        if (start_dir == Graph.RIGHT) {
+          start_x += 10
+        } else {
+          start_y += 10
+        }
+        if (end_dir == Graph.LEFT) {
+          end_x -= 10
+        } else {
+          end_y -= 10
+        }
+        ctx.lineTo(start_x, start_y)
+        ctx.lineTo((start_x + end_x) * 0.5, start_y)
+        ctx.lineTo((start_x + end_x) * 0.5, end_y)
+        ctx.lineTo(end_x, end_y)
+        ctx.lineTo(b[0], b[1])
+      } else {
+        return
       }
     }
 
     ctx.strokeStyle = "rgba(0,0,0,0.5)"
     ctx.stroke()
 
-    ctx.lineWidth = this.connections_width;
-    ctx.fillStyle = ctx.strokeStyle = color;
-    ctx.stroke();
+    ctx.lineWidth = this.connections_width
+    ctx.fillStyle = ctx.strokeStyle = color
+    ctx.stroke()
   }
 
   getCanvasMenuOptions() {
@@ -985,6 +1116,38 @@ export class GraphCanvas {
     this.bgcanvas.width = this.canvas.width
     this.bgcanvas.height = this.canvas.height
     this.setDirty(true, true)
+  }
+
+  isOverNodeInput(node, canvasx, canvasy, slot_pos) {
+    if (node.inputs) {
+      for (let i = 0; i < node.inputs.length; i++) {
+        const input = node.inputs[i]
+        let link_pos = node.getConnectionPos(true, i)
+        let is_inside = false
+
+        if (node.horizontal) {
+          // TODO
+        } else {
+          is_inside = isInsideRectangle(
+            canvasx,
+            canvasy,
+            link_pos[0] - 10,
+            link_pos[1] - 5,
+            40,
+            10
+          )
+        }
+
+        if (is_inside) {
+          if (slot_pos) {
+            slot_pos[0] = link_pos[0]
+            slot_pos[1] = link_pos[1]
+          }
+          return i
+        }
+      }
+    }
+    return -1
   }
 
   getCanvasWindow() {

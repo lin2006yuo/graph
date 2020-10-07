@@ -1,4 +1,5 @@
 import Graph from "./graph.mjs"
+import LLink from "./link.mjs"
 
 class GraphNode {
   constructor(title) {
@@ -42,7 +43,15 @@ class GraphNode {
   }
 
   addInput(name, type) {
-    console.log("graph addInput")
+    type = type || 0
+    let o = { name: name, type: type, link: null }
+
+    if (!this.inputs) {
+      this.inputs = []
+    }
+    this.inputs.push(o)
+    this.setSize(this.computedSize)
+    return o
   }
   addOutput(name, type) {
     let o = { name: name, type: type, links: null }
@@ -62,6 +71,7 @@ class GraphNode {
     let num_slot = 0
 
     if (is_input && this.inputs) {
+      num_slot = this.inputs.length
     }
     if (!is_input && this.outputs) {
       num_slot = this.outputs.length
@@ -70,15 +80,25 @@ class GraphNode {
     let offset = Graph.NODE_SLOT_HEIGHT * 0.5
 
     if (this.flags.collapsed) {
+      // TODO
     }
 
-    if (!is_input && num_slot > slot_number && this.outputs[slot_number].pos) {
+    if (is_input && num_slot > slot_number && this.inputs[slot_number].pos) {
+      out[0] = this.pos[0] + this.inputs[slot_number].pos[0]
+      out[1] = this.pos[1] + this.inputs[slot_number].pos[1]
+      return out
+    } else if (
+      !is_input &&
+      num_slot > slot_number &&
+      this.outputs[slot_number].pos // 目前是undefined
+    ) {
       out[0] = this.pos[0] + this.outputs[slot_number].pos[0]
       out[1] = this.pos[1] + this.outputs[slot_number].pos[1]
       return out
     }
 
     if (is_input) {
+      out[0] = this.pos[0] + offset
     } else {
       out[0] = this.pos[0] + this.size[0] + 1 - offset
     }
@@ -112,6 +132,57 @@ class GraphNode {
       return true
     }
     return false
+  }
+
+  connect(slot, target_node, target_slot) {
+    target_slot = target_slot || 0
+
+    if (!this.graph) return
+
+    if (!target_node) {
+      throw "target node is null"
+    }
+
+    if (target_node === this) return null
+
+    let changed = false
+
+    // 已经被link
+    if (target_node.inputs[target_slot].link !== null) {
+      // TODO
+    }
+
+    let output = this.outputs[slot]
+
+    let input = target_node.inputs[target_slot]
+    let link_info = null
+
+    link_info = new LLink(
+      ++this.graph.last_link_id,
+      input.type,
+      this.id,
+      slot,
+      target_node.id,
+      target_slot
+    )
+
+    this.graph.links[link_info.id] = link_info
+
+    if(output.links === null) {
+      output.links = []
+    }
+
+    output.links.push(link_info.id)
+
+    target_node.inputs[target_slot].link = link_info.id
+
+    if(this.graph) {
+      this.graph._version ++ 
+    }
+
+    this.setDirtyCanvas(false, true)
+
+    return link_info
   }
 
   computedSize() {

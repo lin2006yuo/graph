@@ -40,7 +40,7 @@ class Graph {
   }
 
   static getNodeTypesCategories = function () {
-    return ["basic/time", "子项2"]
+    return ["basic/time", "basic/object_keys"]
   }
 
   static createNode(type, title, options) {
@@ -236,6 +236,8 @@ class Graph {
     this._version = -1
     this._nodes = []
     this._nodes_by_id = {}
+    this.last_link_id = 0
+    this.links = {}
   }
 
   setDirtyCanvas(fg, bg) {

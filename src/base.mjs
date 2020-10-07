@@ -43,4 +43,13 @@ Time.prototype.onExecute = function () {
 }
 Graph.registerNodeType("basic/time", Time)
 
+function ObjectKeys() {
+  this.addInput("obj", "")
+  this.addOutput("keys","array")
+  this.size = [140, 30]
+}
+ObjectKeys.title = "Object Keys"
+ObjectKeys.desc = "Output an array with the keys..."
+Graph.registerNodeType("basic/object_keys", ObjectKeys)
+
 Graph.wrapFunctionAsNode("basic/length", length, [""], "number")
