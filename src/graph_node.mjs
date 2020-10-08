@@ -149,7 +149,8 @@ class GraphNode {
 
     // 已经被link
     if (target_node.inputs[target_slot].link !== null) {
-      // TODO
+      target_node.disconnectInput(target_slot)
+      changed = true
     }
 
     let output = this.outputs[slot]
@@ -168,7 +169,7 @@ class GraphNode {
 
     this.graph.links[link_info.id] = link_info
 
-    if(output.links === null) {
+    if (output.links === null) {
       output.links = []
     }
 
@@ -176,13 +177,51 @@ class GraphNode {
 
     target_node.inputs[target_slot].link = link_info.id
 
-    if(this.graph) {
-      this.graph._version ++ 
+    if (this.graph) {
+      this.graph._version++
     }
 
     this.setDirtyCanvas(false, true)
 
     return link_info
+  }
+
+  disconnectInput(slot) {
+    let input = this.inputs[slot]
+
+    if (!input) return
+
+    let link_id = this.inputs[slot].link
+    if (link_id !== null) {
+      console.log(1)
+      this.inputs[slot].link = null
+
+      let link_info = this.graph.links[link_id]
+      if (link_info) {
+        let target_node = this.graph.getNodeById(link_info.origin_id)
+
+        if (!target_node) return
+
+        let output = target_node.outputs[link_info.origin_slot]
+        if (!output || !output.links || !output.links.length) return
+
+        for (let i = 0; i < output.links.length; i++) {
+          const id = output.links[i]
+          if (id === link_id) {
+            output.links.splice(i, 1)
+            break
+          }
+        }
+
+        delete this.graph.links[link_id]
+
+        if (this.graph) {
+          this.graph._version++
+        }
+      }
+    }
+
+    this.setDirtyCanvas(true, true)
   }
 
   computedSize() {

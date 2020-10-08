@@ -16,6 +16,7 @@ class Graph {
   static NODE_DEFAULT_BGCOLOR = "#353535"
   static DEFAULT_SHADOW_COLOR = "rgba(0,0,0,0.5)"
   static CONNECTING_LINK_COLOR = "#AFA"
+  static LINK_COLOR = "#9A9"
 
   static STRAIGHT_LINK = 0
   static LINEAR_LINK = 1
@@ -214,6 +215,13 @@ class Graph {
       }
     }
     return null
+  }
+
+  getNodeById(id) {
+    if (id == null) {
+      return null
+    }
+    return this._nodes_by_id[id]
   }
 
   detachCanvas(graphcanvas) {}

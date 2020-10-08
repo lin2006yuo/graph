@@ -5,11 +5,21 @@ import { overlapBounding, isInsideRectangle, distance } from "./utils.mjs"
 
 let temp_vec2 = new Float32Array(2)
 let tmp_area = new Float32Array(4)
+let margin_area = new Float32Array(4)
+let link_bounding = new Float32Array(4)
+let tempA = new Float32Array(2)
+let tempB = new Float32Array(2)
 
 export class GraphCanvas {
   static DEFAULT_BACKGROUND_IMAGE = ""
   // "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAQBJREFUeNrs1rEKwjAUhlETUkj3vP9rdmr1Ysammk2w5wdxuLgcMHyptfawuZX4pJSWZTnfnu/lnIe/jNNxHHGNn//HNbbv+4dr6V+11uF527arU7+u63qfa/bnmh8sWLBgwYJlqRf8MEptXPBXJXa37BSl3ixYsGDBMliwFLyCV/DeLIMFCxYsWLBMwSt4Be/NggXLYMGCBUvBK3iNruC9WbBgwYJlsGApeAWv4L1ZBgsWLFiwYJmCV/AK3psFC5bBggULloJX8BpdwXuzYMGCBctgwVLwCl7Be7MMFixYsGDBsu8FH1FaSmExVfAxBa/gvVmwYMGCZbBg/W4vAQYA5tRF9QYlv/QAAAAASUVORK5CYII="
   static active_canvas = null
+
+  static link_type_colors = {
+    "-1": Graph.EVENT_LINK_COLOR,
+    number: "#AAA",
+    node: "#DCA",
+  }
 
   static onMenuAdd(node, options, e, pre_menu, callback) {
     let canvas = GraphCanvas.active_canvas
@@ -84,6 +94,7 @@ export class GraphCanvas {
       output_off: "#778",
       output_on: "#7F7",
     }
+    this.default_link_color = Graph.LINK_COLOR
     this.links_render_mode = Graph.STRAIGHT_LINK // LINEAR_LINK SPLINE_LINK STRAIGHT_LINK
 
     this.visible_nodes = []
@@ -319,6 +330,11 @@ export class GraphCanvas {
         ctx.strokeStyle = "#235"
         ctx.strokeRect(0, 0, canvas.width, canvas.height)
       }
+
+      ctx.shadowColor = "rgba(0,0,0,0)"
+
+      this.drawConnections(ctx)
+
       ctx.restore()
     }
 
@@ -382,7 +398,6 @@ export class GraphCanvas {
           // if (this.connecting_node) {
           //   ctx.globalAlpha = 0.4 * edit_alpha
           // }
-
           ctx.fillStyle =
             slot.link !== null
               ? slot.color_on || this.default_connection_color.input_on
@@ -527,6 +542,103 @@ export class GraphCanvas {
       ctx.strokeStyle = fgcolor
       ctx.globalAlpha = 1
     }
+  }
+
+  drawConnections(ctx) {
+    let now = Graph.getTime()
+    let visible_area = this.visible_area
+    margin_area[0] = visible_area[0] - 20
+    margin_area[1] = visible_area[1] - 20
+    margin_area[2] = visible_area[2] + 40
+    margin_area[3] = visible_area[3] + 40
+
+    ctx.lineWidth = this.connections_width
+
+    ctx.fillStyle = "#AAA"
+    ctx.strokeStyle = "#AAA"
+    ctx.globalAlpha = this.editor_alpha
+
+    let nodes = this.graph._nodes
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i]
+
+      if (!node.inputs || !node.inputs.length) {
+        continue
+      }
+
+      for (let i = 0; i < node.inputs.length; i++) {
+        const input = node.inputs[i]
+        if (!input || input.link === null) continue
+
+        let link_id = input.link
+        let link = this.graph.links[link_id]
+        if (!link) continue
+
+        // link
+        // id: 1
+        // origin_id: 1
+        // origin_slot: 0
+        // target_id: 2
+        // target_slot: 0
+        // type: 0
+        let start_node = this.graph.getNodeById(link.origin_id)
+        if (start_node == null) continue
+
+        let start_node_slot = link.origin_slot
+        let start_node_slotpos = null
+        if (start_node_slot == -1) {
+          start_node_slotpos = [start_node.pos[0] + 10, start_node.pos[1] + 10]
+        } else {
+          start_node_slotpos = start_node.getConnectionPos(
+            false,
+            start_node_slot,
+            tempA
+          )
+        }
+
+        let end_node_slotpos = node.getConnectionPos(true, i, tempB)
+
+        link_bounding[0] = start_node_slotpos[0]
+        link_bounding[1] = start_node_slotpos[1]
+        link_bounding[2] = end_node_slotpos[0] - start_node_slotpos[0]
+        link_bounding[3] = end_node_slotpos[1] - start_node_slotpos[1]
+
+        if (link_bounding[2] < 0) {
+          link_bounding[0] += link_bounding[2]
+          link_bounding[2] = Math.abs(link_bounding[2])
+        }
+        if (link_bounding[3] < 0) {
+          link_bounding[1] += link_bounding[3]
+          link_bounding[3] = Math.abs(link_bounding[3])
+        }
+
+        //skip links outside of the visible area of the canvas
+        if (!overlapBounding(link_bounding, margin_area)) {
+          continue
+        }
+
+        let start_slot = start_node.outputs[start_node_slot]
+        let end_slot = node.inputs[i]
+
+        let start_dir =
+          start_slot.dir || (start_node.horizontal ? Graph.DOWN : Graph.RIGHT)
+        let end_dir = end_slot.dir || (node.horizontal ? Graph.UP : Graph.LEFT)
+
+        this.renderLink(
+          ctx,
+          start_node_slotpos,
+          end_node_slotpos,
+          link,
+          false,
+          0,
+          null,
+          start_dir,
+          end_dir
+        )
+      }
+    }
+
+    ctx.globalAlpha = 1
   }
 
   bindEvents() {
@@ -865,6 +977,19 @@ export class GraphCanvas {
     if (link) {
       this.visible_links.push(link)
     }
+
+    if (!color && link) {
+      color = link.color || GraphCanvas.link_type_colors[link.type]
+    }
+
+    if (!color) {
+      color = this.default_link_color
+    }
+
+    if (link != null && this.highlighted_links[link.id]) {
+      color = "#FFF"
+    }
+
     start_dir = start_dir || Graph.RIGHT
     end_dir = end_dir || Graph.LEFT
 
@@ -1061,6 +1186,7 @@ export class GraphCanvas {
   }
 
   selectNode(node, add_to_current_selection) {
+    console.log(node)
     if (node === null) {
       this.deselectAllNodes()
     } else {
@@ -1076,14 +1202,34 @@ export class GraphCanvas {
     nodes = nodes || this.graph._nodes
     for (let i = 0; i < nodes.length; i++) {
       const node = nodes[i]
+
       if (node.is_selected) {
         continue
       }
+
       if (!node.is_selected && node.onSelected) {
         node.onSelected()
       }
+
       node.is_selected = true
       this.selected_nodes[node.id] = node
+
+      if (node.inputs) {
+        for (let i = 0; i < node.inputs.length; i++) {
+          const input = node.inputs[i]
+          this.highlighted_links[input.link] = true
+        }
+      }
+
+      for (let i = 0; i < node.outputs.length; i++) {
+        const output = node.outputs[i]
+        if (output.links) {
+          for (let i = 0; i < output.links.length; i++) {
+            const link = output.links[i]
+            this.highlighted_links[link] = true
+          }
+        }
+      }
     }
     this.setDirty(true, true)
   }
@@ -1097,8 +1243,32 @@ export class GraphCanvas {
       node.is_selected = false
     }
     this.selected_nodes = {}
+    this.highlighted_links = {}
     this.current_node = null
     this.setDirty(true)
+  }
+
+  deselectNode(node) {
+    if (!node.is_selected) return
+
+    node.is_selected = false
+
+    if (node.inputs) {
+      for (let i = 0; i < node.inputs.length; i++) {
+        const input = node.inputs[i]
+        delete this.highlighted_links[input.link]
+      }
+    }
+
+    for (let i = 0; i < node.outputs.length; i++) {
+      const output = node.outputs[i]
+      if (output.links) {
+        for (let i = 0; i < output.links.length; i++) {
+          const link = output.links[i]
+          delete this.highlighted_links[link]
+        }
+      }
+    }
   }
 
   /** 根据父元素的宽高 */
@@ -1177,6 +1347,7 @@ export class GraphCanvas {
 
   clear() {
     this.selected_nodes = {}
+    this.highlighted_links = {}
     this.connecting_node = null
     this.last_mouse = [0, 0]
   }
