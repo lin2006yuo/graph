@@ -224,6 +224,10 @@ class GraphNode {
     this.setDirtyCanvas(true, true)
   }
 
+  getTitle() {
+    return this.title
+  }
+
   computedSize() {
     return new Float32Array([140, 46])
   }

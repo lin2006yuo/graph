@@ -10,13 +10,16 @@ class Graph {
   static NODE_WIDTH = 140
   static NODE_TITLE_HEIGHT = 30
   static NODE_SUBTEXT_SIZE = 12
+  static NODE_TEXT_SIZE = 14
   static NODE_SLOT_HEIGHT = 20
+  static NODE_TITLE_TEXT_Y = 20
   static NODE_TEXT_COLOR = "#AAA"
   static NODE_DEFAULT_COLOR = "#333"
   static NODE_DEFAULT_BGCOLOR = "#353535"
   static DEFAULT_SHADOW_COLOR = "rgba(0,0,0,0.5)"
   static CONNECTING_LINK_COLOR = "#AFA"
   static LINK_COLOR = "#9A9"
+  static NODE_DEFAULT_BOXCOLOR = '#666'
 
   static STRAIGHT_LINK = 0
   static LINEAR_LINK = 1
@@ -50,6 +53,10 @@ class Graph {
     let node = null
     base_class.prototype
     node = new base_class(title)
+
+    if(!node.title) {
+      node.title = title
+    }
 
     if (!node.size) {
       node.size = node.computedSize()

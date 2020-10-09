@@ -21,6 +21,8 @@ export class GraphCanvas {
     node: "#DCA",
   }
 
+  static gradients = {}
+
   static onMenuAdd(node, options, e, pre_menu, callback) {
     let canvas = GraphCanvas.active_canvas
     let window = canvas.getCanvasWindow()
@@ -72,6 +74,7 @@ export class GraphCanvas {
     this._mouseup_callback = null
     this.dirty_bgcanvas = true
     this.clear_background = true
+    this.use_gradients = false
     this.background_image = GraphCanvas.DEFAULT_BACKGROUND_IMAGE
     this.visible_area = this.ds.visible_area
     this.last_mouse_position = [0, 0]
@@ -82,6 +85,7 @@ export class GraphCanvas {
     this.canvas_mouse = this.graph_mouse
     this.render_shadows = true
     this.inner_text_font = "normal " + Graph.NODE_SUBTEXT_SIZE + "px Arial"
+    this.title_text_font = "" + Graph.NODE_TEXT_SIZE + "px Arial"
     this.selected_nodes = {}
     this.current_node = null
     this.resizing_node = null
@@ -518,6 +522,64 @@ export class GraphCanvas {
       }
 
       ctx.fill()
+    }
+
+    // 绘制标题
+    if (render_title) {
+      let title_color = fgcolor
+
+      if (this.use_gradients) {
+        let grad = GraphCanvas.gradients[title_color]
+        grad = GraphCanvas.gradients[title_color]
+        grad.addColorStop(0, title_color)
+        grad.addColorStop(1, "#000")
+      } else {
+        ctx.fillStyle = title_color
+      }
+
+      if (shape === Graph.BOX_SHAPE) {
+        ctx.rect(0, -title_height, size[0] + 1, title_height)
+      } else if (shape === Graph.ROUND_SHAPE || shape === Graph.card) {
+        // title box
+        ctx.roundRect(
+          0,
+          -title_height,
+          size[0] + 1,
+          title_height,
+          this.round_radius
+        )
+      }
+
+      ctx.fill()
+      ctx.shadowColor = "transparent"
+
+      // title dot
+      let box_size = 10
+      ctx.fillStyle = node.boxcolor || Graph.NODE_DEFAULT_BOXCOLOR
+      ctx.beginPath()
+      ctx.arc(
+        title_height * 0.5,
+        title_height * -0.5,
+        box_size * 0.5,
+        0,
+        Math.PI * 2
+      )
+      ctx.fill()
+
+      ctx.font = this.title_text_font
+      let title = String(node.getTitle())
+
+      if (title) {
+        if (selected) {
+          ctx.fillStyle = "white"
+        }
+        ctx.textAlign = "left"
+        ctx.fillText(
+          title,
+          title_height,
+          Graph.NODE_TITLE_TEXT_Y - title_height
+        )
+      }
     }
 
     if (selected) {
