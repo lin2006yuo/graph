@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #fff9ed;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      class Vector {
+        constructor(x, y) {
+          this.x = x || 0
+          this.y = y || 0
+        }
+        set(x, y) {
+          this.x = x
+          this.y = y
+        }
+        reset() {
+          this.x = 0
+          this.y = 0
+        }
+        fromAngle(angle) {
+          let x = Math.cos(angle),
+            y = Math.sin(angle)
+          return new Vector(x, y)
+        }
+        add(vector) {
+          this.x += vector.x
+          this.y += vector.y
+        }
+        sub(vector) {
+          this.x -= vector.x
+          this.y -= vector.y
+        }
+        mult(scalar) {
+          this.x *= scalar
+          this.y *= scalar
+        }
+        div(scalar) {
+          this.x /= scalar
+          this.y /= scalar
+        }
+        dot(vector) {
+          return vector.x * this.x + vector.y * this.y
+        }
+        limit(limit_value) {
+          if (this.mag() > limit_value) this.setMag(limit_value)
+        }
+        mag() {
+          return Math.hypot(this.x, this.y)
+        }
+        setMag(new_mag) {
+          if (this.mag() > 0) {
+            this.normalize()
+          } else {
+            this.x = 1
+            this.y = 0
+          }
+          this.mult(new_mag)
+        }
+        normalize() {
+          let mag = this.mag()
+          if (mag > 0) {
+            this.x /= mag
+            this.y /= mag
+          }
+        }
+        heading() {
+          return Math.atan2(this.y, this.x)
+        }
+        setHeading(angle) {
+          let mag = this.mag()
+          this.x = Math.cos(angle) * mag
+          this.y = Math.sin(angle) * mag
+        }
+        dist(vector) {
+          return new Vector(this.x - vector.x, this.y - vector.y).mag()
+        }
+        angle(vector) {
+          return Math.atan2(vector.y - this.y, vector.x - this.x)
+        }
+        angle2(vector) {
+          return Math.atan2(
+            Math.abs(vector.y - this.y),
+            Math.abs(vector.x - this.x)
+          )
+        }
+        copy() {
+          return new Vector(this.x, this.y)
+        }
+      }
+      class Point {
+        constructor(x, y) {
+          this.position = new Vector(x, y)
+          this.old_position = new Vector(x, y)
+          this.pinned = false
+        }
+      }
+      class Link {
+        constructor(p0, p1) {
+          this.p0 = p0
+          this.p1 = p1
+          this.length = p0.position.dist(p1.position)
+        }
+      }
+
+      let canvas = document.createElement("canvas"),
+        ctx = canvas.getContext("2d"),
+        H = (canvas.height = 400),
+        W = (canvas.width = 400)
+      document.body.appendChild(canvas)
+      let mouse = new Vector(0, 0)
+      function mousemove() {
+        mouse.x = event.pageX - canvas.offsetLeft
+        mouse.y = event.pageY - canvas.offsetTop
+      }
+      document.addEventListener("mousemove", (e) => mousemove(e), false)
+
+      ctx.lineCap = "round"
+      ctx.strokeStyle
+
+      let points = []
+      let links = []
+
+      let f_points = []
+      let f_links = []
+
+      points.push(new Point(200, 390))
+      points.push(new Point(303, 305))
+      points[0].pinned = true
+      links.push(new Link(points[0], points[1]))
+
+      // 花儿
+      f_points.push(new Point(198, 390))
+      f_points.push(new Point(202, 189))
+      f_points[0].pinned = true
+      f_links.push(new Link(f_points[0], f_points[1]))
+
+      function draw() {
+        ctx.lineWidth = 10
+        ctx.fillStyle = "#33b03b"
+        ctx.beginPath()
+        ctx.moveTo(points[0].position.x, points[0].position.y)
+        ctx.quadraticCurveTo(
+          276,
+          368.5,
+          points[1].position.x,
+          points[1].position.y
+        )
+        // ctx.moveTo(points[0].position.x, points[0].position.y)
+        ctx.quadraticCurveTo(
+          176,
+          288.5,
+          points[0].position.x,
+          points[0].position.y
+        )
+        ctx.stroke()
+        ctx.fill()
+        ctx.closePath()
+      }
+
+      function petal(center) {
+        ctx.beginPath()
+        ctx.moveTo(center.x - 20, center.y + 20)
+        ctx.bezierCurveTo(
+          center.x - (20 - 2),
+          center.y + (20 + 20),
+          center.x + (20 - 2),
+          center.y + (20 + 20),
+          center.x + 20,
+          center.y + 20
+        )
+        ctx.bezierCurveTo(
+          center.x + 20,
+          center.y,
+          center.x + 20 / 2,
+          center.y + (20 - 48),
+          center.x,
+          center.y - 20
+        )
+        ctx.bezierCurveTo(
+          center.x - 20 / 2,
+          center.y + (20 - 48),
+          center.x - 20,
+          center.y,
+          center.x - 20,
+          center.y + 20
+        )
+        ctx.closePath()
+      }
+      function drawPetal() {
+        // 花瓣一
+        ctx.save()
+        ctx.fillStyle = "#f7cc3a"
+        ctx.transform(1, 0, 0, 1, 0 + 17, 0)
+        ctx.transform(
+          Math.cos(Math.PI / 15),
+          Math.sin(Math.PI / 15),
+          -Math.sin(Math.PI / 15),
+          Math.cos(Math.PI / 15),
+          0,
+          0
+        )
+        petal(new Vector(0, 0))
+        ctx.fill()
+        ctx.restore()
+
+        // 花瓣二
+        ctx.save()
+        ctx.fillStyle = "#f7cc3a"
+        ctx.transform(1, 0, 0, 1, 0 + 3, 0)
+        ctx.transform(
+          Math.cos(-Math.PI / 10),
+          Math.sin(-Math.PI / 10),
+          -Math.sin(-Math.PI / 10),
+          Math.cos(-Math.PI / 10),
+          0,
+          0
+        )
+        petal(new Vector(0, 0))
+        ctx.fill()
+        ctx.restore()
+
+        // 主花瓣
+        ctx.save()
+        // ctx.transform(Math.cos(30), Math.sin(30), -Math.sin(30), Math.cos(30), 5, 0)
+        ctx.transform(1, 0, 0, 1, 10, 0)
+        ctx.fillStyle = "#f9b32b"
+        petal(new Vector(0, 0))
+        ctx.fill()
+        ctx.restore()
+      }
+      function drawFlower() {
+        ctx.lineWidth = 6
+        ctx.fillStyle = "#c2daf0"
+        ctx.beginPath()
+        ctx.moveTo(f_points[0].position.x, f_points[0].position.y)
+        ctx.quadraticCurveTo(
+          170,
+          390,
+          f_points[1].position.x,
+          f_points[1].position.y
+        )
+        ctx.stroke()
+
+        let center = new Vector(
+          f_points[1].position.x - 15,
+          f_points[1].position.y - 25
+        )
+
+        let angle = f_links[0].p1.position.angle(f_links[0].p0.position)
+        angle = Math.PI / 2 - (angle + 0.2)
+        let d_angle = Math.abs((f_links[0].p0.position.angle(f_links[0].p1.position) * 180) / Math.PI)
+        let offset = (90 - d_angle) / 2
+        ctx.save()
+        ctx.transform(
+          Math.cos(-angle),
+          Math.sin(-angle),
+          -Math.sin(-angle),
+          Math.cos(-angle),
+          center.x + 10 + offset,
+          center.y
+        )
+
+        drawPetal()
+
+        ctx.restore()
+      }
+
+      function update() {
+        for (let i = 0; i < points.length; i++) {
+          const point = points[i]
+          if (point.pinned) continue
+
+          let velocity = point.position.copy()
+          velocity.sub(point.old_position)
+          velocity.mult(0.98)
+          point.old_position = point.position.copy()
+          point.position.add(velocity)
+          point.position.x += Math.cos(-1.0)
+          point.position.y += Math.sin(-1.0)
+
+          let distance = point.position.dist(mouse)
+
+          if (distance < 100) {
+            let force = new Vector()
+            let angle = point.position.angle(mouse)
+            force.setMag(0.8)
+            force.setHeading(angle)
+            point.position.add(force)
+          }
+        }
+
+        links.forEach((link) => {
+          let distance = link.p0.position.dist(link.p1.position),
+            difference = link.length - distance,
+            percent = difference / distance / 8
+          let offset = new Vector(
+            (link.p1.position.x - link.p0.position.x) * percent,
+            (link.p1.position.y - link.p0.position.y) * percent
+          )
+          if (!link.p0.pinned) {
+            link.p0.position.sub(offset)
+          }
+          if (!link.p1.pinned) {
+            link.p1.position.add(offset)
+          }
+        })
+
+        for (let i = 0; i < f_points.length; i++) {
+          const point = f_points[i]
+          if (point.pinned) continue
+
+          let velocity = point.position.copy()
+          velocity.sub(point.old_position)
+          velocity.mult(0.98)
+          point.old_position = point.position.copy()
+          point.position.add(velocity)
+          point.position.x += Math.cos(-1.5)
+          point.position.y += Math.sin(-1.5)
+
+          let distance = point.position.dist(mouse)
+
+          if (distance < 50) {
+            let force = new Vector()
+            let angle = point.position.angle(mouse)
+            force.setMag(0.4)
+            force.setHeading(angle)
+            point.position.add(force)
+          }
+        }
+
+        f_links.forEach((link) => {
+          let distance = link.p0.position.dist(link.p1.position),
+            difference = link.length - distance,
+            percent = difference / distance / 8
+          let offset = new Vector(
+            (link.p1.position.x - link.p0.position.x) * percent,
+            (link.p1.position.y - link.p0.position.y) * percent
+          )
+          if (!link.p0.pinned) {
+            link.p0.position.sub(offset)
+          }
+          if (!link.p1.pinned) {
+            link.p1.position.add(offset)
+          }
+        })
+      }
+
+      draw()
+      drawFlower()
+      function loop() {
+        ctx.clearRect(0, 0, 400, 400)
+        update()
+        draw()
+        drawFlower()
+        requestAnimationFrame(loop)
+      }
+      loop()
+    </script>
+  </body>
+</html>
