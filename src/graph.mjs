@@ -44,7 +44,7 @@ class Graph {
   }
 
   static getNodeTypesCategories = function () {
-    return ["basic/time", "basic/object_keys"]
+    return ["base_output", "base_input"]
   }
 
   static createNode(type, title, options) {

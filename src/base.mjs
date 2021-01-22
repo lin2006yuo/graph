@@ -33,23 +33,23 @@ import Graph from "./graph.mjs"
 })()
 
 function Time() {
-  this.addOutput("in ms", "number")
-  this.addOutput("in sec", "number")
+  this.addOutput("out", "number")
+  this.addOutput("out", "number")
 }
-Time.title = "Time"
+Time.title = "out Node"
 Time.desc = "Time"
 Time.prototype.onExecute = function () {
   console.log("Time onExecute")
 }
-Graph.registerNodeType("basic/time", Time)
+Graph.registerNodeType("base_output", Time)
 
 function ObjectKeys() {
   this.addInput("obj", "")
   this.addOutput("keys","array")
   this.size = [140, 30]
 }
-ObjectKeys.title = "Object Keys"
+ObjectKeys.title = "in out Node"
 ObjectKeys.desc = "Output an array with the keys..."
-Graph.registerNodeType("basic/object_keys", ObjectKeys)
+Graph.registerNodeType("base_input", ObjectKeys)
 
 Graph.wrapFunctionAsNode("basic/length", length, [""], "number")
