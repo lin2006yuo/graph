@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="../size.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <title>Timeline</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="canvas"></canvas>
+      <h3>Canvas</h3>
+      <div>width: {{canvasWidth}}</div>
+      <div>height: {{canvasHeight}}</div>
+      <div>scale: {{scale}}</div>
+    </div>
+
+    <script>
+      function getTickStartEnd(start, tick, begin = true) {
+        let mod = start | tick
+        let div = begin ? Math.floor(start / tick) : Math.ceil(start / tick)
+        return mod > 0 ? div * tick : start
+      }
+      let vm = new Vue({
+        el: "#app",
+        data() {
+          return {
+            canvas: null,
+            ctx: null,
+            canvasWidth: 0,
+            canvasHeight: 0,
+            
+            start: 0,
+            scale: 1,
+          }
+        },
+        computed: {
+          end() {
+            return this.canvasWidth * this.scale
+          },
+          tick() {
+            if(this.scale > 0.38) {
+              return 50
+            } else {
+              return 20
+            }
+          }
+        },
+        mounted() {
+          let { canvas, width: canvasWidth, height: canvasHeight } = new KSize(
+            "canvas",
+            {
+              width: 500,
+              height: 500,
+            }
+          )
+          this.canvas = canvas
+          this.ctx = this.canvas.getContext("2d")
+          this.canvasWidth = canvasWidth
+          this.canvasHeight = canvasHeight
+
+          canvas.addEventListener("mousewheel", this.processMouseWheel)
+
+          this.draw()
+        },
+        methods: {
+          draw() {
+            this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
+            this.ctx.save()
+            this.drawCoord()
+            this.ctx.restore()
+          },
+          processMouseWheel(e) {
+            e.preventDefault()
+            if (e.wheelDelta > 0) {
+              this.scale *= 1.05
+            } else {
+              this.scale *= 1 / 1.05
+            }
+
+            this.draw()
+          },
+          drawCoord() {
+            const { ctx, canvasWidth, canvasHeight, start, end, tick } = this
+            ctx.strokeStyle = "black"
+            // x轴
+            ctx.beginPath()
+            ctx.moveTo(0, canvasHeight / 2)
+            ctx.lineTo(canvasWidth, canvasHeight / 2)
+            ctx.stroke()
+
+            // 坐标
+            let fontSize = 24
+            // 刻度
+            const tickStart = getTickStartEnd(start, tick)
+            const tickEnd = getTickStartEnd(end, tick, false)
+            const count = (tickEnd - tickStart) / tick
+            let step = canvasWidth / count
+            console.log(count, this.scale);
+            for (let i = 0; i <= count; i++) {
+              ctx.beginPath()
+              ctx.moveTo(i * step, canvasHeight / 2)
+              ctx.lineTo(i * step, canvasHeight / 2 - 10)
+              ctx.font = fontSize + "px Helvetica"
+              ctx.fillText(
+                Math.floor(tickStart + i * tick),
+                i * step - fontSize,
+                canvasHeight / 2 + fontSize
+              )
+              ctx.stroke()
+            }
+          },
+        },
+      })
+    </script>
+  </body>
+</html>

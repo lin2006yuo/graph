@@ -22,6 +22,9 @@
       <h3>偏移量</h3>
       <div>offsetX = translateX: {{translate[0]}}</div>
       <div>offsetY = translateY: {{translate[1]}}</div>
+      <h3>移动偏移量</h3>
+      <div>offsetX = move_translateX: {{move_transform[0]}}</div>
+      <div>offsetY = move_translateY: {{move_transform[1]}}</div>
       <h3>缩放值</h3>
       <div>scale: {{scale}}</div>
       <h3>visible area</h3>
@@ -58,6 +61,7 @@
               x: 0,
               y: 0,
             },
+            move_transform: new Float32Array(2)
           }
         },
         computed: {
@@ -112,6 +116,9 @@
             this.translate[0] += delta[0] / this.scale
             this.translate[1] += delta[1] / this.scale
 
+            this.move_transform[0] += delta[0] / this.scale
+            this.move_transform[1] += delta[1] / this.scale
+
             this.$forceUpdate()
             this.draw()
           },
@@ -126,7 +133,8 @@
             } else {
               this.scale *= 1 / 1.1
             }
-
+            e.localX = this.canvas.width / 2
+            e.localY = this.canvas.height / 2
             const center = this.pos([e.localX, e.localY])
             this.t_scale = this.scale
             const new_center = this.pos([e.localX, e.localY])
@@ -134,6 +142,7 @@
               new_center[0] - center[0],
               new_center[1] - center[1],
             ]
+            // console.log(delta_offset);
             this.translate[0] += delta_offset[0]
             this.translate[1] += delta_offset[1]
 
@@ -184,8 +193,8 @@
             this.ctx.lineWidth = lineWidth
             this.ctx.stroke()
             // 坐标
-            // -this.translate[0] 无限步数
-            let countPX = (this.visibleWidth - this.translate[0]) / step
+            // +this.translate[0] 无限步数
+            let countPX = Math.ceil((this.visibleWidth / 2 - this.move_transform[0]) / step)
             for (let i = 0; i < countPX; i++) {
               const x = i * step + centerWidth
               this.ctx.beginPath()
@@ -197,7 +206,8 @@
               this.ctx.fillText(i * step, x - fontSize, centerHeight + fontSize)
               this.ctx.stroke()
             }
-            let countNX = (centerWidth + this.translate[0]) / step
+            let countNX = Math.ceil((this.visibleWidth / 2 + this.move_transform[0]) / step)
+            console.log(countNX);
             for (let i = 0; i < countNX; i++) {
               const x = i * -step + centerWidth
               this.ctx.beginPath()
