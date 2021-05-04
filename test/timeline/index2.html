@@ -15,7 +15,7 @@
       .operator {
         margin-left: 20px;
       }
-      .slider {
+      .range-slider {
         -webkit-appearance: none;
         -moz-appearance: none;
         appearance: none;
@@ -25,7 +25,7 @@
         border-radius: 0.25rem;
         background-color: #000;
       }
-      .slider::-webkit-slider-thumb {
+      .range-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
         width: 1.5rem;
@@ -35,6 +35,20 @@
         border-radius: 1rem;
         cursor: pointer;
       }
+
+      .scroll-bar-wrapper {
+        margin-bottom: 30px;
+      }
+      .scroll-bar {
+        height: 4px;
+        background: #000;
+      }
+
+      .slider {
+        width: 500px;
+        height: 20px;
+        background-color: #666;
+      }
     </style>
   </head>
   <body>
@@ -42,20 +56,50 @@
       <div class="wrapper">
         <div>
           <canvas id="canvas"></canvas>
+          <div class="scroll-bar-wrapper">
+            <div
+              class="scroll-bar"
+              :style="{width: scrollbarWidth + 'px', transform: `translateX(${scrollbarTransformX}px)`}"
+            ></div>
+          </div>
+          <div class="slider-wrapper" id="slider-wrapper">
+            <div class="slider"></div>
+          </div>
+
           <h3>Canvas</h3>
           <div>width: {{canvasWidth}}</div>
           <div>height: {{canvasHeight}}</div>
           <div>scale: {{scale}}</div>
+          <div>pxStart: {{pxStart}}</div>
+          <div>fixedTStart: {{fixedTStart}}</div>
+          <div>x: {{x}}</div>
         </div>
 
         <div class="operator">
           <h3>Bar</h3>
-          <input @input="handleChange" type="range" min="0" max="100" :value="RangePercent" class="slider" />
+          <input @input="handleChange" type="range" min="0" max="100" :value="RangePercent" class="range-slider" />
         </div>
       </div>
     </div>
 
     <script>
+      class WheelAccumulator {
+        dx = 0;
+        dy = 0;
+
+        push(p) {
+          this.dx += p.x;
+          this.dy += p.y;
+        }
+
+        clear() {
+          this.dx = 0;
+          this.dy = 0;
+        }
+      }
+      const SCROLLBAR_MIN_WIDTH = 100;
+      let SCROLLBAR_MAX_WIDTH = 0;
+      const wa = new WheelAccumulator();
       const TIME_MAP_DATA = [
         { largeScale: 7200000, smallScale: 480000, minRatio: 57142.84, maxRatio: 28571.42 },
         { largeScale: 3600000, smallScale: 240000, minRatio: 28571.42, maxRatio: 14285.71 },
@@ -101,6 +145,20 @@
         let div = begin ? Math.floor(start / tick) : Math.ceil(start / tick);
         return mod > 0 ? div * tick : start;
       }
+      const Keyboard = {
+        command: false,
+      };
+      const IS_WINDOWS = /windows|win32|win64|wow32|wow64/gi.test(navigator.userAgent);
+      const IS_MAC = /macintosh|macintel/gi.test(navigator.userAgent);
+      function withCommand(ev) {
+        if (IS_WINDOWS) {
+          return ev.ctrlKey;
+        } else if (IS_MAC) {
+          return ev.metaKey;
+        } else {
+          return false;
+        }
+      }
       let vm = new Vue({
         el: '#app',
         data() {
@@ -110,10 +168,16 @@
             canvasWidth: 0,
             canvasHeight: 0,
 
+            scrollbarWidth: 0,
+            scrollbarTransformX: 0,
+
             start: 0,
             scale: 1,
-            duration: 30000,
+            duration: 1200,
             RangePercent: 0,
+            x: 0,
+            pxStart: 0,
+            fixedTStart: 0,
           };
         },
         computed: {
@@ -123,7 +187,7 @@
         },
         mounted() {
           let { canvas, width: canvasWidth, height: canvasHeight } = new KSize('canvas', {
-            width: 500,
+            width: 50,
             height: 500,
           });
           this.canvas = canvas;
@@ -132,6 +196,13 @@
           this.canvasHeight = canvasHeight;
 
           canvas.addEventListener('mousewheel', this.processMouseWheel.bind(this));
+          window.addEventListener('keydown', this.processKeyDown.bind(this));
+          window.addEventListener('keyup', this.processKeyUp.bind(this));
+
+          const $sliderWrapper = document.getElementById('slider-wrapper');
+          SCROLLBAR_MAX_WIDTH = $sliderWrapper.getBoundingClientRect().width;
+          const contentMS = this.px2ms(this.canvasWidth);
+          this.scrollbarWidth = (SCROLLBAR_MAX_WIDTH - 2) * (contentMS / this.duration);
 
           this.draw();
         },
@@ -144,17 +215,23 @@
           },
           handleChange(e) {
             let percent = e.target.value / 100;
-            this.RangePercent = e.target.value
-            // Math.pow(maxRatio / minRatio, p) * minRatio;
+            this.RangePercent = e.target.value;
             this.scale = Math.pow(this.maxScale / 1, percent) * 1;
-            this.draw();
+            this.zoom(this.scale);
+          },
+          processKeyDown(e) {
+            Keyboard.command = withCommand(e);
+          },
+          processKeyUp(e) {
+            Keyboard.command = withCommand(e);
           },
           processMouseWheel(event) {
             event.preventDefault();
+
+            // 缩放
             let delta = 0;
             delta = -event.deltaY / 1000;
-
-            if (delta) {
+            if (delta && Keyboard.command) {
               const zoomFriction = 0.4;
               let scale;
               if (delta < 0) {
@@ -162,18 +239,41 @@
               } else {
                 scale = 1 / (1 + delta / zoomFriction);
               }
-              // Prevent default actions caused by mouse wheel
-              // (else the page and timeline both scroll)
               let res = this.scale * scale;
               if (res < 1) res = 1;
               if (res > this.maxScale) res = this.maxScale;
               this.scale = res;
-              this.RangePercent = Math.log(res / 1) / Math.log(this.maxScale / 1) * 100
-              this.draw();
+              this.RangePercent = (Math.log(res / 1) / Math.log(this.maxScale / 1)) * 100;
+              this.zoom(this.scale);
+            }
+
+            // 水平滑动
+            if (!Keyboard.command) {
+              wa.push({
+                origin: event,
+                x: event.deltaX,
+                y: event.deltaY,
+              });
+              const { dx, dy } = wa;
+              wa.clear();
+              if (dx !== 0) {
+                let offset = this.x + this.px2ms(dx);
+                const barMS = this.px2ms(this.scrollbarWidth);
+                const contentMS = this.px2ms(this.canvasWidth);
+                if (offset < 0) offset = 0;
+                if (offset + contentMS > this.duration) offset = this.duration - contentMS;
+                this.x = offset;
+                const px = this.ms2px(offset); // px
+                this.scrollbarTransformX = (px * SCROLLBAR_MAX_WIDTH) / this.ms2px(this.duration);
+
+                this.draw();
+              }
             }
           },
           zoom(scale) {
             this.scale = scale;
+            const contentMS = this.px2ms(this.canvasWidth);
+            this.scrollbarWidth = (SCROLLBAR_MAX_WIDTH - 2) * (contentMS / this.duration);
             this.draw();
           },
           ms2px(ms) {
@@ -190,8 +290,7 @@
             ctx.moveTo(0, canvasHeight / 2);
             ctx.lineTo(canvasWidth, canvasHeight / 2);
             ctx.stroke();
-
-            const begin = 0;
+            const begin = this.x; // ms
             const end = px2ms(canvasWidth);
 
             const fontSize = 24;
@@ -199,12 +298,19 @@
 
             const scale = TIME_MAP_DATA.find((o) => o.maxRatio <= this.scale) || TIME_MAP_DATA[TIME_MAP_DATA.length - 1];
 
-            const pxBegin = ms2px(begin);
             const pxEnd = ms2px(this.duration);
 
-            const step = ms2px(scale.smallScale);
+            const fixedTStart = Math.ceil(begin / scale.smallScale) * scale.smallScale;
+            const pxStart = ms2px(fixedTStart - begin);
+            // const fixedTStart = Math.ceil(begin / scale.smallScale) * scale.smallScale;
+            // const pxStart = ms2px(scale.smallScale - (begin % scale.smallScale));
 
-            for (let x = pxBegin, t = begin; x <= pxEnd; x += step, t += scale.smallScale) {
+            // 记录
+            this.pxStart = pxStart;
+            this.fixedTStart = fixedTStart;
+
+            const step = ms2px(scale.smallScale);
+            for (let x = pxStart, t = fixedTStart; x <= pxEnd; x += step, t += scale.smallScale) {
               ctx.beginPath();
               ctx.font = fontSize + 'px Helvetica';
 
