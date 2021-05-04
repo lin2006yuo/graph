@@ -6,63 +6,103 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="../size.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
     <title>Timeline</title>
+    <style>
+      .wrapper {
+        display: flex;
+      }
+      .operator {
+        margin-left: 20px;
+      }
+      .slider {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        width: 10rem;
+        height: 0.25rem;
+        outline: none;
+        border-radius: 0.25rem;
+        background-color: #000;
+      }
+      .slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #fff;
+        border: 0.25rem solid #000;
+        border-radius: 1rem;
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
     <div id="app">
-      <canvas id="canvas"></canvas>
-      <h3>Canvas</h3>
-      <div>width: {{canvasWidth}}</div>
-      <div>height: {{canvasHeight}}</div>
-      <div>scale: {{scale}}</div>
+      <div class="wrapper">
+        <div>
+          <canvas id="canvas"></canvas>
+          <h3>Canvas</h3>
+          <div>width: {{canvasWidth}}</div>
+          <div>height: {{canvasHeight}}</div>
+          <div>scale: {{scale}}</div>
+        </div>
+
+        <div class="operator">
+          <h3>Bar</h3>
+          <input @input="handleChange" type="range" min="0" max="100" :value="RangePercent" class="slider" />
+        </div>
+      </div>
     </div>
 
     <script>
-      const TickMap = (function () {
-        function tick(unitNumber) {
-          if(unitNumber === 'ms') {
-            return [1, 2, 5].map((n) => n * 100)
-          }
-          return [1, 5, 15, 30, 60].map((n) => n * unitNumber)
+      const TIME_MAP_DATA = [
+        { largeScale: 7200000, smallScale: 480000, minRatio: 57142.84, maxRatio: 28571.42 },
+        { largeScale: 3600000, smallScale: 240000, minRatio: 28571.42, maxRatio: 14285.71 },
+        { largeScale: 1800000, smallScale: 120000, minRatio: 14285.71, maxRatio: 7142.85 },
+        { largeScale: 900000, smallScale: 60000, minRatio: 7142.85, maxRatio: 2380.95 },
+        { largeScale: 300000, smallScale: 30000, minRatio: 2380.95, maxRatio: 952.38 },
+        { largeScale: 120000, smallScale: 12000, minRatio: 952.38, maxRatio: 466.19 },
+        { largeScale: 60000, smallScale: 5000, minRatio: 476.19, maxRatio: 238.09 },
+        { largeScale: 30000, smallScale: 2000, minRatio: 238.09, maxRatio: 119.04 },
+        { largeScale: 15000, smallScale: 1000, minRatio: 119.04, maxRatio: 39.68 },
+        { largeScale: 5000, smallScale: 500, minRatio: 39.68, maxRatio: 15.87 },
+        { largeScale: 2000, smallScale: 200, minRatio: 15.87, maxRatio: 7.93 },
+        { largeScale: 1000, smallScale: 200, minRatio: 7.93, maxRatio: 1.32 },
+        { largeScale: 200, smallScale: 40, minRatio: 1.32, maxRatio: 1 },
+      ];
+      const getScaleText = (time, scale) => {
+        const hours = addZero(Math.floor(time / (60 * 60 * 1000)));
+        const minutes = addZero(Math.floor((time % (1000 * 60 * 60)) / (60 * 1000)));
+        const seconds = addZero(Math.floor((time % (1000 * 60)) / 1000));
+        const ms = addZero(time % 1000, 3);
+        let res = [hours, minutes, seconds].join(':');
+        if (hours === '00') {
+          res = res.slice(3);
         }
-        return ['ms', 1000, 60000, 3600000].reduce((t, c) => {
-          return [...t, ...tick(c)]
-        }, [])
-      })()
-      console.log(TickMap)
+        // ms 级别
+        if (scale < 1000) {
+          if (res === '00:00') {
+            res = '';
+          }
+          res += `.${ms}`;
+        }
+        return res;
+      };
+      const ratios = TIME_MAP_DATA.map((o) => o.maxRatio).sort((a, b) => b - a);
+      const minRatio = ratios[0];
+      const maxRatio = ratios[ratios.length - 1];
+      const calcP = (r) => Math.log(r / minRatio) / Math.log(maxRatio / minRatio);
       function addZero(num, digit = 2) {
-        return num.toString().padStart(digit, "0")
-      }
-      function msTodTime(ms, tick) {
-        const s = addZero(Math.floor((ms % (1000 * 60)) / 1000))
-        const m = addZero(Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60)))
-        const h = addZero(Math.floor(ms / (1000 * 60 * 60)))
-        const ss = addZero(ms % 1000, 3)
-        let res = [h, m, s, ss].join(":")
-        if (h === "00") {
-          res = res.slice(3)
-        }
-        if (tick <= 500) {
-          if (res === "00:00") {
-            res = ""
-            res += `.${ss}`
-          }
-        }
-        return res
-      }
-      function getTick(begin, end) {
-        const delta = end - begin
-        const approxTick = delta / 6
-        const index = TickMap.findIndex((n) => approxTick < n)
-        return [TickMap[index], index]
+        return num.toString().padStart(digit, '0');
       }
       function getTickStartEnd(start, tick, begin = true) {
-        let mod = start | tick
-        let div = begin ? Math.floor(start / tick) : Math.ceil(start / tick)
-        return mod > 0 ? div * tick : start
+        let mod = start | tick;
+        let div = begin ? Math.floor(start / tick) : Math.ceil(start / tick);
+        return mod > 0 ? div * tick : start;
       }
       let vm = new Vue({
-        el: "#app",
+        el: '#app',
         data() {
           return {
             canvas: null,
@@ -72,102 +112,115 @@
 
             start: 0,
             scale: 1,
-          }
+            duration: 30000,
+            RangePercent: 0,
+          };
         },
         computed: {
-          end() {
-            return this.canvasWidth * this.scale
-          },
-          tick() {
-            if (this.scale > 0.38) {
-              return 50
-            } else {
-              return 20
-            }
+          maxScale() {
+            return this.duration / this.canvasWidth;
           },
         },
         mounted() {
-          let { canvas, width: canvasWidth, height: canvasHeight } = new KSize(
-            "canvas",
-            {
-              width: 500,
-              height: 500,
-            }
-          )
-          this.canvas = canvas
-          this.ctx = this.canvas.getContext("2d")
-          this.canvasWidth = canvasWidth
-          this.canvasHeight = canvasHeight
+          let { canvas, width: canvasWidth, height: canvasHeight } = new KSize('canvas', {
+            width: 500,
+            height: 500,
+          });
+          this.canvas = canvas;
+          this.ctx = this.canvas.getContext('2d');
+          this.canvasWidth = canvasWidth;
+          this.canvasHeight = canvasHeight;
 
-          canvas.addEventListener("mousewheel", this.processMouseWheel)
+          canvas.addEventListener('mousewheel', this.processMouseWheel.bind(this));
 
-          this.draw()
+          this.draw();
         },
         methods: {
           draw() {
-            this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
-            this.ctx.save()
-            this.drawCoord()
-            this.ctx.restore()
+            this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+            this.ctx.save();
+            this.drawCoord();
+            this.ctx.restore();
           },
-          processMouseWheel(e) {
-            e.preventDefault()
-            if (e.wheelDelta > 0) {
-              this.scale *= 1.05
-            } else {
-              let res = this.scale / 1.05
-              if (res < 1) return
-              this.scale = res
-            }
+          handleChange(e) {
+            let percent = e.target.value / 100;
+            this.RangePercent = e.target.value
+            // Math.pow(maxRatio / minRatio, p) * minRatio;
+            this.scale = Math.pow(this.maxScale / 1, percent) * 1;
+            this.draw();
+          },
+          processMouseWheel(event) {
+            event.preventDefault();
+            let delta = 0;
+            delta = -event.deltaY / 1000;
 
-            this.draw()
+            if (delta) {
+              const zoomFriction = 0.4;
+              let scale;
+              if (delta < 0) {
+                scale = 1 - delta / zoomFriction;
+              } else {
+                scale = 1 / (1 + delta / zoomFriction);
+              }
+              // Prevent default actions caused by mouse wheel
+              // (else the page and timeline both scroll)
+              let res = this.scale * scale;
+              if (res < 1) res = 1;
+              if (res > this.maxScale) res = this.maxScale;
+              this.scale = res;
+              this.RangePercent = Math.log(res / 1) / Math.log(this.maxScale / 1) * 100
+              this.draw();
+            }
+          },
+          zoom(scale) {
+            this.scale = scale;
+            this.draw();
+          },
+          ms2px(ms) {
+            return ms / this.scale;
+          },
+          px2ms(px) {
+            return px * this.scale;
           },
           drawCoord() {
-            const { ctx, canvasWidth, canvasHeight } = this
-            ctx.strokeStyle = "black"
+            const { ctx, canvasWidth, canvasHeight, ms2px, px2ms } = this;
+            ctx.strokeStyle = 'black';
             // x轴
-            ctx.beginPath()
-            ctx.moveTo(0, canvasHeight / 2)
-            ctx.lineTo(canvasWidth, canvasHeight / 2)
-            ctx.stroke()
+            ctx.beginPath();
+            ctx.moveTo(0, canvasHeight / 2);
+            ctx.lineTo(canvasWidth, canvasHeight / 2);
+            ctx.stroke();
 
-            const begin = 0
-            const end = 30000 / this.scale
-            const [tick, index] = getTick(begin, end)
-            const largeTick = tick[index + 1]
-            const fontSize = 24
-            const marginLeft = 0
-            const step = (canvasWidth - marginLeft * 6) / (end - begin)
-            let gap = 4
-            let gapCount = 0
-            for (let i = begin; i <= end; i += tick) {
-              const x = i * step + marginLeft
-              ctx.beginPath()
-              ctx.moveTo(x, canvasHeight / 2)
-              ctx.lineTo(x, canvasHeight / 2 - 20)
-              ctx.font = fontSize + "px Helvetica"
-              ctx.fillText(
-                msTodTime(i, tick),
-                x - fontSize / 3,
-                canvasHeight / 2 + fontSize
-              )
-              ctx.stroke()
+            const begin = 0;
+            const end = px2ms(canvasWidth);
 
-              const cur = i * step
-              const next = (i + tick) * step
-              const avg = (next - cur) / 10
-              for (let n_i = cur; n_i <= next; n_i += avg) {
-                ctx.beginPath()
-                const x = n_i
-                ctx.moveTo(x, canvasHeight / 2)
-                ctx.lineTo(x, canvasHeight / 2 - 10)
-                ctx.font = fontSize + "px Helvetica"
-                ctx.stroke()
+            const fontSize = 24;
+            const marginLeft = 0;
+
+            const scale = TIME_MAP_DATA.find((o) => o.maxRatio <= this.scale) || TIME_MAP_DATA[TIME_MAP_DATA.length - 1];
+
+            const pxBegin = ms2px(begin);
+            const pxEnd = ms2px(this.duration);
+
+            const step = ms2px(scale.smallScale);
+
+            for (let x = pxBegin, t = begin; x <= pxEnd; x += step, t += scale.smallScale) {
+              ctx.beginPath();
+              ctx.font = fontSize + 'px Helvetica';
+
+              let lineHeight = 20;
+              if (t % scale.largeScale === 0) {
+                lineHeight = 40;
+                const timeText = getScaleText(t, scale.largeScale);
+                ctx.fillText(timeText, x - fontSize / 3, canvasHeight / 2 + fontSize);
               }
+              ctx.moveTo(x, canvasHeight / 2);
+              ctx.lineTo(x, canvasHeight / 2 - lineHeight);
+              ctx.stroke();
             }
           },
         },
-      })
+      });
     </script>
   </body>
 </html>
