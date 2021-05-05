@@ -70,10 +70,15 @@
         background: #000;
       }
 
-      .slider {
+      .timeline-bar {
         width: 500px;
         height: 20px;
+        position: absolute;
         background-color: #666;
+        text-align: center;
+        line-height: 20px;
+        font-size: 13px;
+        color: #fff;
       }
     </style>
   </head>
@@ -92,7 +97,9 @@
             ></div>
           </div>
           <div class="slider-wrapper" id="slider-wrapper">
-            <div class="slider"></div>
+            <div class="timeline-bar" :style="{width: timelineWidth + 'px', transform: `translateX(${timelineTransform}px)`}">
+              <span>{{timelineEnd - timelineStart}}ms</span>
+            </div>
           </div>
 
           <h3>Canvas</h3>
@@ -111,6 +118,7 @@
           <div>pxStart: {{pxStart}}</div>
           <div>pxEnd: {{pxEnd}}</div>
           <div>fixedTStart: {{fixedTStart}}</div>
+          <abbr>x偏移量</abbr>
           <div>x(ms): {{x}}</div>
           <div>x(px): {{xpx}}</div>
         </div>
@@ -215,7 +223,7 @@
             start: 0,
             scale: 1,
             duration: 12000,
-            RangePercent: 0,
+            RangePercent: 30,
             x: 0,
             pxStart: 0,
             fixedTStart: 0,
@@ -224,6 +232,9 @@
             needleActive: false,
             needleOffset: [0, 0],
             needleLastOffset: [0, 0],
+
+            timelineStart: 4000,
+            timelineEnd: 5000,
           };
         },
         computed: {
@@ -234,11 +245,18 @@
             return this.px2ms(this.canvasWidth);
           },
           needleTranslateX() {
-            return this.ms2acpx(this.currentTime)
-          },  
+            return this.ms2acpx(this.currentTime);
+          },
           xpx() {
             return this.x / this.scale;
           },
+          timelineWidth() {
+            const widthMS = this.timelineEnd - this.timelineStart
+            return widthMS / this.scale / 2
+          },
+          timelineTransform() {
+            return this.ms2acpx(this.timelineStart)
+          }
         },
         mounted() {
           let { canvas, width: canvasWidth, height: canvasHeight } = new KSize('canvas', {
@@ -302,10 +320,21 @@
               const delta = [x1 - x2, y1 - y2];
               this.needleLastOffset = [x1, y1]; // 记录上一次值
 
-              this.currentTime += delta[0] * 2 * this.scale
-              let max = this.x + this.px2ms(this.canvasWidth)
-              if(this.currentTime < 0) this.currentTime = 0
-              if(this.currentTime > max) this.currentTime = max
+              const ms = delta[0] * 2 * this.scale;
+              this.currentTime += ms;
+              let max = this.x + this.px2ms(this.canvasWidth);
+              let min = this.x
+              if (this.currentTime < 0) this.currentTime = 0;
+              if (this.currentTime > this.duration) this.currentTime = this.duration;
+
+              // 探视视野
+              if (this.currentTime > max || this.currentTime < min) {
+                this.x += ms;
+                // 滚动条
+                const px = this.ms2px(this.x); // px
+                this.scrollbarTransformX = (px * SCROLLBAR_MAX_WIDTH) / this.ms2px(this.duration);
+                this.draw();
+              }
 
               this.$forceUpdate();
             }
@@ -409,13 +438,12 @@
             return ms / this.scale;
           },
           ms2acpx(ms) {
-            return (ms - this.x) / this.scale / 2
+            return (ms - this.x) / this.scale / 2;
           },
           px2ms(px) {
             return px * this.scale;
           },
           acpx2ms(px) {
-            // return this.px2ms((this.needleOffset[0] * 2)) + this.x
             return px * 2 * this.scale + this.x;
           },
           drawCoord() {
