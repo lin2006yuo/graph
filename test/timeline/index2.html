@@ -166,6 +166,8 @@
           <div>timelineBarActive: {{timelineBarActive}}</div>
           <div>right: {{timelineBarHandleRight}}</div>
           <div>left: {{timelineBarHandleLeft}}</div>
+          <div>start: {{timelineStart}}</div>
+          <div>end: {{timelineEnd}}</div>
         </div>
 
         <div class="operator">
@@ -402,6 +404,7 @@
               }
 
               this.$forceUpdate();
+              return
             }
 
             if (this.scrollBarActive) {
@@ -422,6 +425,7 @@
 
               this.$forceUpdate();
               this.draw();
+              return 
             }
 
             if (this.timelineBarHandleLeft || this.timelineBarHandleRight) {
@@ -436,6 +440,8 @@
               if (this.timelineBarHandleLeft) {
                 this.timelineStart += delta[0] * 2 * this.scale;
               }
+
+              return
             }
           },
           per2scale(percent) {
