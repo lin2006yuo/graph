@@ -64,6 +64,8 @@
 
       .scroll-bar-wrapper {
         margin-bottom: 30px;
+        background: #ddd;
+        cursor: pointer;
       }
       .scroll-bar {
         height: 4px;
@@ -74,11 +76,40 @@
         width: 500px;
         height: 20px;
         position: absolute;
-        background-color: #666;
+        background-color: #fff;
         text-align: center;
         line-height: 20px;
         font-size: 13px;
-        color: #fff;
+        color: #000;
+        box-sizing: content-box;
+        border: 3px solid #000;
+
+        position: relative;
+      }
+
+      .timeline-bar-handle-left {
+        position: absolute;
+        left: -3px;
+        top: 50%;
+        transform: translate3d(0, -50%, 0);
+        width: 3px;
+        height: 20px;
+        background-color: transparent;
+        border: 5px solid #000;
+        border-right: none;
+        cursor: pointer;
+      }
+      .timeline-bar-handle-right {
+        position: absolute;
+        right: -3px;
+        top: 50%;
+        transform: translate3d(0, -50%, 0);
+        width: 3px;
+        height: 20px;
+        background-color: transparent;
+        border: 5px solid #000;
+        border-left: none;
+        cursor: pointer;
       }
     </style>
   </head>
@@ -90,15 +121,21 @@
             <canvas id="canvas"></canvas>
             <div id="needle" class="needle" :style="{ transform: `translateX(${needleTranslateX}px)` }"></div>
           </div>
-          <div class="scroll-bar-wrapper">
+          <div class="scroll-bar-wrapper" id="scroll-bar-wrapper">
             <div
               class="scroll-bar"
-              :style="{width: scrollbarWidth + 'px', transform: `translateX(${scrollbarTransformX}px)`}"
+              :style="{width: scrollbarWidth + 'px', transform: `translateX(${scrollBarOffset[0]}px)`}"
             ></div>
           </div>
           <div class="slider-wrapper" id="slider-wrapper">
-            <div class="timeline-bar" :style="{width: timelineWidth + 'px', transform: `translateX(${timelineTransform}px)`}">
-              <span>{{timelineEnd - timelineStart}}ms</span>
+            <div
+              class="timeline-bar"
+              id="timeline-bar"
+              :style="{width: timelineWidth + 'px', transform: `translateX(${timelineTransform}px)`}"
+            >
+              <span>{{(timelineEnd - timelineStart).toFixed(2)}}ms</span>
+              <div class="timeline-bar-handle-left" data-dir="left"></div>
+              <div class="timeline-bar-handle-right" data-dir="right"></div>
             </div>
           </div>
 
@@ -121,6 +158,14 @@
           <abbr>x偏移量</abbr>
           <div>x(ms): {{x}}</div>
           <div>x(px): {{xpx}}</div>
+
+          <h3>ScrollBar</h3>
+          <div>scrollbarActive: {{scrollBarActive}}</div>
+
+          <h3>timelineBar</h3>
+          <div>timelineBarActive: {{timelineBarActive}}</div>
+          <div>right: {{timelineBarHandleRight}}</div>
+          <div>left: {{timelineBarHandleLeft}}</div>
         </div>
 
         <div class="operator">
@@ -217,7 +262,6 @@
             canvasHeight: 0,
 
             scrollbarWidth: 0,
-            scrollbarTransformX: 0,
 
             currentTime: 2000,
             start: 0,
@@ -235,6 +279,16 @@
 
             timelineStart: 4000,
             timelineEnd: 5000,
+
+            scrollBarActive: false,
+            scrollBarOffset: [0, 0],
+            scrollBarLastOffset: [0, 0],
+
+            timelineBarActive: false,
+            timelineBarHandleRight: false,
+            timelineBarHandleLeft: false,
+            timelineBarOffset: [0, 0],
+            timelineBarLastOffset: [0, 0],
           };
         },
         computed: {
@@ -251,12 +305,12 @@
             return this.x / this.scale;
           },
           timelineWidth() {
-            const widthMS = this.timelineEnd - this.timelineStart
-            return widthMS / this.scale / 2
+            const widthMS = this.timelineEnd - this.timelineStart;
+            return widthMS / this.scale / 2;
           },
           timelineTransform() {
-            return this.ms2acpx(this.timelineStart)
-          }
+            return this.ms2acpx(this.timelineStart);
+          },
         },
         mounted() {
           let { canvas, width: canvasWidth, height: canvasHeight } = new KSize('canvas', {
@@ -275,17 +329,24 @@
           canvas.addEventListener('mousewheel', this.processMouseWheel.bind(this));
           window.addEventListener('keydown', this.processKeyDown.bind(this));
           window.addEventListener('keyup', this.processKeyUp.bind(this));
+
           const $needle = document.getElementById('needle');
           $needle.addEventListener('mousedown', this.handleNeedleDown.bind(this));
           window.addEventListener('mouseup', this.handleMouseUp.bind(this));
           window.addEventListener('mousemove', this.handleMouseMove.bind(this));
+
+          const $scrollBar = document.getElementById('scroll-bar-wrapper');
+          $scrollBar.addEventListener('mousedown', this.handleScrollBarDown.bind(this));
+
+          const $timelineBar = document.getElementById('timeline-bar');
+          $timelineBar.addEventListener('mousedown', this.handleTimelineBarDown.bind(this));
 
           this.scale = this.per2scale(this.RangePercent / 100);
 
           const $sliderWrapper = document.getElementById('slider-wrapper');
           SCROLLBAR_MAX_WIDTH = $sliderWrapper.getBoundingClientRect().width;
           const contentMS = this.px2ms(this.canvasWidth);
-          this.scrollbarWidth = (SCROLLBAR_MAX_WIDTH - 2) * (contentMS / this.duration);
+          this.scrollbarWidth = SCROLLBAR_MAX_WIDTH * (contentMS / this.duration);
 
           this.draw();
         },
@@ -312,6 +373,10 @@
           },
           handleMouseUp(e) {
             this.needleActive = false;
+            this.scrollBarActive = false;
+            this.timelineBarActive = false;
+            this.timelineBarHandleLeft = false;
+            this.timelineBarHandleRight = false;
           },
           handleMouseMove(e) {
             if (this.needleActive) {
@@ -323,20 +388,54 @@
               const ms = delta[0] * 2 * this.scale;
               this.currentTime += ms;
               let max = this.x + this.px2ms(this.canvasWidth);
-              let min = this.x
+              let min = this.x;
               if (this.currentTime < 0) this.currentTime = 0;
               if (this.currentTime > this.duration) this.currentTime = this.duration;
 
               // 探视视野
               if (this.currentTime > max || this.currentTime < min) {
                 this.x += ms;
+                const percent = this.x / this.duration;
                 // 滚动条
-                const px = this.ms2px(this.x); // px
-                this.scrollbarTransformX = (px * SCROLLBAR_MAX_WIDTH) / this.ms2px(this.duration);
+                this.scrollBarOffset[0] = SCROLLBAR_MAX_WIDTH * percent;
                 this.draw();
               }
 
               this.$forceUpdate();
+            }
+
+            if (this.scrollBarActive) {
+              const [x2, y2] = this.scrollBarLastOffset;
+              const [x1, y1] = [e.clientX, e.clientY];
+              const delta = [x1 - x2, y1 - y2];
+              this.scrollBarLastOffset = [x1, y1]; // 记录上一次值
+
+              this.scrollBarOffset[0] += delta[0];
+              this.scrollBarOffset[1] += delta[1];
+              let max = SCROLLBAR_MAX_WIDTH - this.scrollbarWidth;
+              let min = 0;
+              if (this.scrollBarOffset[0] > max) this.scrollBarOffset[0] = max;
+              if (this.scrollBarOffset[0] < 0) this.scrollBarOffset[0] = 0;
+
+              const percent = this.scrollBarOffset[0] / SCROLLBAR_MAX_WIDTH;
+              this.x = this.duration * percent;
+
+              this.$forceUpdate();
+              this.draw();
+            }
+
+            if (this.timelineBarHandleLeft || this.timelineBarHandleRight) {
+              const [x2, y2] = this.timelineBarLastOffset;
+              const [x1, y1] = [e.clientX, e.clientY];
+              const delta = [x1 - x2, y1 - y2];
+              this.timelineBarLastOffset = [x1, y1]; // 记录上一次值
+
+              if (this.timelineBarHandleRight) {
+                this.timelineEnd += delta[0] * 2 * this.scale;
+              }
+              if (this.timelineBarHandleLeft) {
+                this.timelineStart += delta[0] * 2 * this.scale;
+              }
             }
           },
           per2scale(percent) {
@@ -371,10 +470,25 @@
             }
 
             this.x = t;
+            const percent = this.x / this.duration;
 
             // 滚动条
-            const px = this.ms2px(t); // px
-            this.scrollbarTransformX = (px * SCROLLBAR_MAX_WIDTH) / this.ms2px(this.duration);
+            this.scrollBarOffset[0] = SCROLLBAR_MAX_WIDTH * percent;
+          },
+          handleScrollBarDown(e) {
+            this.scrollBarActive = true;
+            this.scrollBarLastOffset = [e.clientX, e.clientY];
+          },
+          handleTimelineBarDown(e) {
+            this.timelineBarActive = true;
+            this.timelineBarLastOffset = [e.clientX, e.clientY];
+            const dir = e.target.dataset['dir'];
+            if (dir === 'right') {
+              this.timelineBarHandleRight = true;
+            } else if (dir === 'left') {
+              this.timelineBarHandleLeft = true;
+            }
+            this.timelineBarLastOffset = [e.clientX, e.clientY];
           },
           processMouseWheel(event) {
             event.preventDefault();
@@ -420,9 +534,9 @@
                 if (offset + contentMS > this.duration) offset = this.duration - contentMS;
                 this.x = offset;
 
+                const percent = this.x / this.duration;
                 // 滚动条
-                const px = this.ms2px(offset); // px
-                this.scrollbarTransformX = (px * SCROLLBAR_MAX_WIDTH) / this.ms2px(this.duration);
+                this.scrollBarOffset[0] = SCROLLBAR_MAX_WIDTH * percent;
 
                 this.draw();
               }
