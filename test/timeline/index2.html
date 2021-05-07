@@ -159,7 +159,7 @@
           <div>scale: {{scale}}</div>
           <div>maxScale: {{maxScale}}</div>
           <div>minScale: {{minScale}}</div>
-          <div>minSpan: {{minSpan}}</div>
+          <div>minSpan最小精度: <input v-model="minSpan" type="number" min="200"></div>
           <div>pxStart: {{pxStart}}</div>
           <div>pxEnd: {{pxEnd}}</div>
           <div>fixedTStart: {{fixedTStart}}</div>
@@ -300,7 +300,7 @@
             currentTime: 3000,
             start: 0,
             scale: 1,
-            minSpan: 30e3,
+            minSpan: 1000,
             duration: 15000,
             RangePercent: 0,
             x: 0,
@@ -538,6 +538,7 @@
           },
           processMouseWheel(event) {
             event.preventDefault();
+            if(this.minScale > this.maxScale) return 
 
             // 缩放
             let delta = 0;
@@ -555,10 +556,9 @@
               let res = this.scale * scale;
               if (res < 1) res = 1;
               if (res > this.maxScale) res = this.maxScale;
+
               this.scale = res;
-
               this.RangePercent = +this.scale2per(res) * 100; // 缩放比
-
               this.afterScroll(p);
               this.zoom(this.scale);
             }
