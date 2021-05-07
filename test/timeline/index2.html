@@ -13,6 +13,7 @@
         display: flex;
         margin-top: 100px;
         justify-content: center;
+        user-select: none;
       }
       .operator {
         margin-left: 20px;
@@ -144,7 +145,7 @@
             </div>
           </div>
 
-          <h3>Canvas</h3>
+          <h3 style="margin-top: 100px">Canvas</h3>
           <div>width: {{canvasWidth}}</div>
           <div>height: {{canvasHeight}}</div>
           <div>duration: {{duration}}</div>
@@ -159,7 +160,7 @@
           <div>scale: {{scale}}</div>
           <div>maxScale: {{maxScale}}</div>
           <div>minScale: {{minScale}}</div>
-          <div>minSpan最小精度: <input v-model="minSpan" type="number" min="200"></div>
+          <div>minSpan最小精度: <input v-model="minSpan" type="number" min="200" /></div>
           <div>pxStart: {{pxStart}}</div>
           <div>pxEnd: {{pxEnd}}</div>
           <div>fixedTStart: {{fixedTStart}}</div>
@@ -203,6 +204,8 @@
       }
       const SCROLLBAR_MIN_WIDTH = 100;
       let SCROLLBAR_MAX_WIDTH = 0;
+      let CONTENT_LEFT = 0;
+      let CONTENT_RIGHT = 0;
       const wa = new WheelAccumulator();
       const TIME_MAP_DATA = [
         // { largeScale: 7200000, smallScale: 480000, minRatio: 57142.84, maxRatio: 28571.42 },
@@ -313,7 +316,11 @@
             needleLastOffset: [0, 0],
 
             timelineStart: 4000,
-            timelineEnd: 5000,
+            timelineEnd: 6000,
+
+            scaleBarActive: false,
+            scaleBarOffset: [0, 0],
+            scaleBarLastOffset: [0, 0],
 
             scrollBarActive: false,
             scrollBarOffset: [0, 0],
@@ -331,7 +338,7 @@
             return this.duration / this.canvasWidth;
           },
           minScale() {
-            return this.minSpan / this.canvasWidth
+            return this.minSpan / this.canvasWidth;
           },
           contentDuration() {
             return this.px2ms(this.canvasWidth);
@@ -381,8 +388,10 @@
 
           this.scale = this.per2scale(this.RangePercent / 100);
 
-          const $sliderWrapper = document.getElementById('slider-wrapper');
+          const $sliderWrapper = document.getElementById('scroll-bar-wrapper');
           SCROLLBAR_MAX_WIDTH = $sliderWrapper.getBoundingClientRect().width;
+          CONTENT_LEFT = $sliderWrapper.getBoundingClientRect().left;
+          CONTENT_RIGHT = $sliderWrapper.getBoundingClientRect().right;
           const contentMS = this.px2ms(this.canvasWidth);
           this.scrollbarWidth = SCROLLBAR_MAX_WIDTH * (contentMS / this.duration);
 
@@ -397,12 +406,12 @@
           },
           handleChange(e) {
             const p = this.beforeScroll();
-            if(this.maxScale < this.minScale) return 
+            if (this.maxScale < this.minScale) return;
 
             let percent = e.target.value / 100;
             const scale = this.per2scale(percent);
 
-            this.scale = scale
+            this.scale = scale;
             this.RangePercent = percent * 100;
             this.afterScroll(p);
             this.zoom(this.scale);
@@ -419,19 +428,44 @@
             this.timelineBarHandleRight = false;
           },
           handleMouseMove(e) {
-            e.preventDefault();
             if (this.needleActive) {
               const [x2, y2] = this.needleLastOffset;
               const [x1, y1] = [e.clientX, e.clientY];
               const delta = [x1 - x2, y1 - y2];
               this.needleLastOffset = [x1, y1]; // 记录上一次值
 
-              const ms = delta[0] * 2 * this.scale;
+              let ms = delta[0] * 2 * this.scale;
+
+              const current = e.clientX;
+              if (current > CONTENT_RIGHT || current < CONTENT_LEFT) {
+                const dir = current > CONTENT_RIGHT ? 'right' : 'left';
+                ms = dir === 'right' ? 20 : -20;
+              }
+              
               this.currentTime += ms;
               let max = this.x + this.px2ms(this.canvasWidth);
               let min = this.x;
               if (this.currentTime < 0) this.currentTime = 0;
               if (this.currentTime > this.duration) this.currentTime = this.duration;
+
+              // const current = e.clientX;
+              // function fixed(ms) {
+              //   if (ms < 0) ms = 0;
+              //   if (ms > this.duration) ms = this.duration;
+              //   return ms
+              // }
+              // if (current > CONTENT_RIGHT || current < CONTENT_LEFT) {
+              //   const dir = current > CONTENT_RIGHT ? 'right' : 'left';
+              //   let ms = dir === 'right' ? 20 : -20;
+              //   let x = this.x;
+              //   x += ms;
+              //   this.x = fixed(x);
+              //   this.currentTime = this.x
+              //   const percent = this.x / this.duration;
+              //   // 滚动条
+              //   this.scrollBarOffset[0] = SCROLLBAR_MAX_WIDTH * percent;
+              //   this.draw();
+              // }
 
               // 探视视野
               if (this.currentTime > max || this.currentTime < min) {
@@ -475,14 +509,20 @@
 
               if (this.timelineBarHandleRight) {
                 this.timelineEnd += delta[0] * 2 * this.scale;
-                if(this.timelineEnd - this.timelineStart < 1000) {
-                  this.timelineEnd = this.timelineStart + 1000
+                if (this.timelineEnd - this.timelineStart < 1000) {
+                  this.timelineEnd = this.timelineStart + 1000;
+                }
+                if (this.timelineEnd > this.duration) {
+                  this.timelineEnd = this.duration;
                 }
               }
               if (this.timelineBarHandleLeft) {
                 this.timelineStart += delta[0] * 2 * this.scale;
-                if(this.timelineEnd - this.timelineStart < 1000) {
-                  this.timelineStart = this.timelineEnd - 1000
+                if (this.timelineEnd - this.timelineStart < 1000) {
+                  this.timelineStart = this.timelineEnd - 1000;
+                }
+                if (this.timelineStart < 0) {
+                  this.timelineStart = 0;
                 }
               }
 
@@ -490,11 +530,11 @@
             }
           },
           per2scale(percent) {
-            const min = this.minScale
+            const min = this.minScale;
             return Math.pow(this.maxScale / min, 1 - percent) * min;
           },
           scale2per(scale) {
-            const min = this.minScale
+            const min = this.minScale;
             return 1 - Math.log(scale / min) / Math.log(this.maxScale / min); // 缩放比
           },
           processKeyDown(e) {
@@ -545,7 +585,7 @@
           },
           processMouseWheel(event) {
             event.preventDefault();
-            if(this.minScale > this.maxScale) return 
+            if (this.minScale > this.maxScale) return;
 
             // 缩放
             let delta = 0;
