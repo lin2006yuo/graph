@@ -419,6 +419,7 @@
             this.timelineBarHandleRight = false;
           },
           handleMouseMove(e) {
+            e.preventDefault();
             if (this.needleActive) {
               const [x2, y2] = this.needleLastOffset;
               const [x1, y1] = [e.clientX, e.clientY];
@@ -474,9 +475,15 @@
 
               if (this.timelineBarHandleRight) {
                 this.timelineEnd += delta[0] * 2 * this.scale;
+                if(this.timelineEnd - this.timelineStart < 1000) {
+                  this.timelineEnd = this.timelineStart + 1000
+                }
               }
               if (this.timelineBarHandleLeft) {
                 this.timelineStart += delta[0] * 2 * this.scale;
+                if(this.timelineEnd - this.timelineStart < 1000) {
+                  this.timelineStart = this.timelineEnd - 1000
+                }
               }
 
               return;
