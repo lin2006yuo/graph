@@ -11,6 +11,8 @@
     <style>
       .wrapper {
         display: flex;
+        margin-top: 100px;
+        justify-content: center;
       }
       .operator {
         margin-left: 20px;
@@ -72,6 +74,9 @@
         background: #000;
       }
 
+      .slider-wrapper {
+        position: absolute;
+      }
       .timeline-bar {
         width: 500px;
         height: 20px;
@@ -152,6 +157,9 @@
 
           <h3>Information</h3>
           <div>scale: {{scale}}</div>
+          <div>maxScale: {{maxScale}}</div>
+          <div>minScale: {{minScale}}</div>
+          <div>minSpan: {{minSpan}}</div>
           <div>pxStart: {{pxStart}}</div>
           <div>pxEnd: {{pxEnd}}</div>
           <div>fixedTStart: {{fixedTStart}}</div>
@@ -164,6 +172,7 @@
 
           <h3>timelineBar</h3>
           <div>timelineBarActive: {{timelineBarActive}}</div>
+          <div>width: {{timelineWidth}}</div>
           <div>right: {{timelineBarHandleRight}}</div>
           <div>left: {{timelineBarHandleLeft}}</div>
           <div>start: {{timelineStart}}</div>
@@ -171,7 +180,7 @@
         </div>
 
         <div class="operator">
-          <h3>Bar</h3>
+          <h3>Scale</h3>
           <input @input="handleChange" type="range" min="0" max="100" :value="RangePercent" class="range-slider" />
         </div>
       </div>
@@ -196,6 +205,29 @@
       let SCROLLBAR_MAX_WIDTH = 0;
       const wa = new WheelAccumulator();
       const TIME_MAP_DATA = [
+        // { largeScale: 7200000, smallScale: 480000, minRatio: 57142.84, maxRatio: 28571.42 },
+        // { largeScale: 3600000, smallScale: 240000, minRatio: 28571.42, maxRatio: 14285.71 },
+        // { largeScale: 1800000, smallScale: 120000, minRatio: 14285.71, maxRatio: 7142.85 },
+        // { largeScale: 900000, smallScale: 60000, minRatio: 7142.85, maxRatio: 2380.95 },
+        // { largeScale: 300000, smallScale: 30000, minRatio: 2380.95, maxRatio: 952.38 },
+        // { largeScale: 120000, smallScale: 12000, minRatio: 952.38, maxRatio: 466.19 },
+        // { largeScale: 60000, smallScale: 5000, minRatio: 476.19, maxRatio: 238.09 },
+        // { largeScale: 30000, smallScale: 2000, minRatio: 238.09, maxRatio: 119.04 },
+        // { largeScale: 15000, smallScale: 1000, minRatio: 1, maxRatio: 1 },
+        // { largeScale: 5000, smallScale: 500, minRatio: 1, maxRatio: 1 },
+        // { largeScale: 2000, smallScale: 200, minRatio: 1, maxRatio: 1 },
+        // { largeScale: 1000, smallScale: 200, minRatio: 1, maxRatio: 1 },
+        // { largeScale: 200, smallScale: 40, minRatio: 1, maxRatio: 1 },
+
+        // { largeScale: 7200000, smallScale: 480000, minRatio: 2380.95, maxRatio: 952.38 },
+        // { largeScale: 3600000, smallScale: 240000, minRatio: 952.38, maxRatio: 238.09 },
+        // { largeScale: 1800000, smallScale: 120000, minRatio: 476.19, maxRatio: 119.04 },
+        // { largeScale: 900000, smallScale: 60000, minRatio: 238.09, maxRatio: 39.68 },
+        // { largeScale: 300000, smallScale: 30000, minRatio: 119.04, maxRatio: 15.87 },
+        // { largeScale: 120000, smallScale: 12000, minRatio: 39.68, maxRatio: 7.93 },
+        // { largeScale: 60000, smallScale: 5000, minRatio: 7.93, maxRatio: 1.32 },
+        // { largeScale: 30000, smallScale: 2000, minRatio: 1.32, maxRatio: 1 },
+
         { largeScale: 7200000, smallScale: 480000, minRatio: 57142.84, maxRatio: 28571.42 },
         { largeScale: 3600000, smallScale: 240000, minRatio: 28571.42, maxRatio: 14285.71 },
         { largeScale: 1800000, smallScale: 120000, minRatio: 14285.71, maxRatio: 7142.85 },
@@ -265,11 +297,12 @@
 
             scrollbarWidth: 0,
 
-            currentTime: 2000,
+            currentTime: 3000,
             start: 0,
             scale: 1,
-            duration: 12000,
-            RangePercent: 30,
+            minSpan: 30e3,
+            duration: 15000,
+            RangePercent: 0,
             x: 0,
             pxStart: 0,
             fixedTStart: 0,
@@ -296,6 +329,9 @@
         computed: {
           maxScale() {
             return this.duration / this.canvasWidth;
+          },
+          minScale() {
+            return this.minSpan / this.canvasWidth
           },
           contentDuration() {
             return this.px2ms(this.canvasWidth);
@@ -361,11 +397,13 @@
           },
           handleChange(e) {
             const p = this.beforeScroll();
+            if(this.maxScale < this.minScale) return 
 
             let percent = e.target.value / 100;
-            this.RangePercent = e.target.value;
-            this.scale = this.per2scale(percent);
+            const scale = this.per2scale(percent);
 
+            this.scale = scale
+            this.RangePercent = percent * 100;
             this.afterScroll(p);
             this.zoom(this.scale);
           },
@@ -404,7 +442,7 @@
               }
 
               this.$forceUpdate();
-              return
+              return;
             }
 
             if (this.scrollBarActive) {
@@ -425,7 +463,7 @@
 
               this.$forceUpdate();
               this.draw();
-              return 
+              return;
             }
 
             if (this.timelineBarHandleLeft || this.timelineBarHandleRight) {
@@ -441,14 +479,16 @@
                 this.timelineStart += delta[0] * 2 * this.scale;
               }
 
-              return
+              return;
             }
           },
           per2scale(percent) {
-            return Math.pow(this.maxScale / 1, 1 - percent) * 1;
+            const min = this.minScale
+            return Math.pow(this.maxScale / min, 1 - percent) * min;
           },
           scale2per(scale) {
-            return 1 - Math.log(scale / 1) / Math.log(this.maxScale / 1); // 缩放比
+            const min = this.minScale
+            return 1 - Math.log(scale / min) / Math.log(this.maxScale / min); // 缩放比
           },
           processKeyDown(e) {
             Keyboard.command = withCommand(e);
