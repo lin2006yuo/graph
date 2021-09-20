@@ -14,6 +14,13 @@
     <canvas width="400" height="400" style="border: 1px solid"></canvas>
     <script>
       var m3 = {
+        normalize: function() {
+          return [
+              1, 0, 0,
+              0, 1, 0,
+              0, 0, 1
+          ]
+        },
         translation: function (tx, ty) {
           // prettier-ignore
           return [
@@ -150,10 +157,14 @@
           this.scaleX = 1;
           this.scaleY = 1;
           this.angle = 0;
+          this.mat = m3.translation(0, 0)
+          
+          this.lastMouse = {x: 0, y: 0}
 
           this.isMouseDown = false;
 
           const mousedown = () => {
+            [this.lastMouse.x, this.lastMouse.y] = [this.mouse.x, this.mouse.y];
             this.isMouseDown = true;
           };
 
@@ -163,8 +174,12 @@
 
           const mousemove = () => {
             if (this.isMouseDown) {
-              // this.scaleX = this.mouse.x / this.dot4.x;
-              // this.scaleY = this.mouse.y / this.dot4.y;
+              const delta = [this.mouse.x - this.lastMouse.x, this.mouse.y - this.lastMouse.y]
+              console.log(delta)
+              this.mat_t = m3.translation(delta[0], delta[1]);
+              this.mat = m3.multiply(this.mat, this.mat_t)
+              this.lastMouse.x = this.mouse.x;
+              this.lastMouse.y = this.mouse.y
             }
           };
 
@@ -187,35 +202,32 @@
           ctx.lineJoin = 'round';
           ctx.beginPath();
 
-          // 矩阵变换
-          const mat_t = m3.translation(this.translateX, this.translateY);
-          const mat_r = m3.rotation((Math.PI * this.angle) / 180);
-          const mat_s = m3.scaling(this.scaleX, this.scaleY);
+          // const mat_t = m3.translation(this.translateX, this.translateY);
+          // const mat_r = m3.rotation((Math.PI * this.angle) / 180);
+          // const mat_s = m3.scaling(this.scaleX, this.scaleY);
+          // let mat_e;
+          // mat_e = m3.multiply(mat_t, mat_r);
+          // mat_e = m3.multiply(mat_e, mat_s);
+          // let mat_e = m3.translation(0, 0);
 
-          let mat_e = m3.multiply(mat_r, mat_t);
-          mat_e = m3.multiply(mat_e, mat_s);
+          [this.dot1.x, this.dot1.y] = m3.multiplyPoint(this.mat, [this.dot1.x, this.dot1.y, 1]);
+          [this.dot2.x, this.dot2.y] = m3.multiplyPoint(this.mat, [this.dot2.x, this.dot2.y, 1]);
+          [this.dot3.x, this.dot3.y] = m3.multiplyPoint(this.mat, [this.dot3.x, this.dot3.y, 1]);
+          [this.dot4.x, this.dot4.y] = m3.multiplyPoint(this.mat, [this.dot4.x, this.dot4.y, 1]);
+          this.mat = m3.normalize()
 
-          const d1 = m3.multiplyPoint(mat_e, [this.dot1.x, this.dot1.y, 1]);
-          const d2 = m3.multiplyPoint(mat_e, [this.dot2.x, this.dot2.y, 1]);
-          const d3 = m3.multiplyPoint(mat_e, [this.dot3.x, this.dot3.y, 1]);
-          const d4 = m3.multiplyPoint(mat_e, [this.dot4.x, this.dot4.y, 1]);
-
-          ctx.moveTo(d1[0], d1[1]);
-          ctx.lineTo(d2[0], d2[1]);
-          ctx.lineTo(d3[0], d3[1]);
-          ctx.lineTo(d4[0], d4[1]);
+          ctx.moveTo(this.dot1.x, this.dot1.y);
+          ctx.lineTo(this.dot2.x, this.dot2.y);
+          ctx.lineTo(this.dot3.x, this.dot3.y);
+          ctx.lineTo(this.dot4.x, this.dot4.y);
           ctx.closePath();
           ctx.stroke();
           ctx.fill();
           ctx.restore();
 
-          this.dot1.setPosition({ x: d1[0], y: d1[1] });
           this.dot1.draw(ctx);
-          this.dot2.setPosition({ x: d2[0], y: d2[1] });
           this.dot2.draw(ctx);
-          this.dot3.setPosition({ x: d3[0], y: d3[1] });
           this.dot3.draw(ctx);
-          this.dot4.setPosition({ x: d4[0], y: d4[1] });
           this.dot4.draw(ctx);
         }
       }
@@ -235,9 +247,9 @@
 
         rect.setPosition({
           angle: 0,
-          translateX: 0,
+          translateX: 10,
           translateY: 0,
-          scaleX: 1.001,
+          angle: -2,
         });
 
         rect.draw(ctx);
