@@ -1,3 +1,17 @@
+### 郁金香 [demo](https://graph-three.vercel.app/test/tulipa/index.html)
+---
+
+### 时间轴 [Timeline](https://graph-three.vercel.app/test/timeline/index2.html)
+---
+### 类文本选择框 [demo](https://graph-three.vercel.app/example/canvas/mat.html)  
+---
+### Jelly Effect
+ball [demo](https://graph-three.vercel.app/example/balls/index.html)    
+粘体 [demo](https://graph-three.vercel.app/example/balls/slime/index.html)  
+
+---
+  
+
 ## 流程图
 
 [preview](https://graph.lin2006yuo.vercel.app/)  
@@ -173,14 +187,3 @@ root.addEventListener(
     true
 );
 ```
-
-### 郁金香 [demo](https://graph-three.vercel.app/test/tulipa/index.html)
-> ctx.transform 变换矩阵
-
-### 时间轴 [Timeline](https://graph-three.vercel.app/test/timeline/index2.html)
-> 这是我的五一劳动节
-
-### 类文本选择框 [demo](https://graph-three.vercel.app/example/canvas/mat.html)  
-> 基于二维矩阵变换思想，支持平移，旋转，缩放
-
-### Jelly Effect ball [demo](https://graph-three.vercel.app/example/balls/index.html)
