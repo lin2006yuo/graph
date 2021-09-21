@@ -182,3 +182,5 @@ root.addEventListener(
 
 ### 类文本选择框 [demo](https://graph-three.vercel.app/example/canvas/mat.html)  
 > 基于二维矩阵变换思想，支持平移，旋转，缩放
+
+### Jelly Effect ball [demo](https://graph-three.vercel.app/example/balls/index.html)
