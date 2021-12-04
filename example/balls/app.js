@@ -6,7 +6,7 @@ let balls = [];
 
 let mouse = new Ball(0, 0, 30, "green");
 
-for (var i = 0; i < 600; i++) {
+for (var i = 0; i < 1; i++) {
 	balls.push(
 		new Ball(
 			// 200 + 100 * Math.cos(i * 2 * Math.PI / 50),
