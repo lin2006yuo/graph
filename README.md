@@ -3,7 +3,12 @@
 
 ### 时间轴 [Timeline](https://graph-three.vercel.app/test/timeline/index2.html)
 ---
-### 类文本选择框 [demo](https://graph-three.vercel.app/example/canvas/mat.html)  
+### 选择框 [demo](https://graph-three.vercel.app/test/matrix/index.html)  
+基本版本 [demo](https://graph-three.vercel.app/test/matrix/index-basic.html)   
+拖拽版本 [demo](https://graph-three.vercel.app/test/matrix/index-basic.html) 
+> 矩阵变换
+
+
 ---
 ### Jelly Effect
 ball [demo](https://graph-three.vercel.app/example/balls/index.html)    
