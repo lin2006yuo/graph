@@ -61,26 +61,6 @@
           <canvas id="canvas"></canvas>
           <div class="operator">
             <div class="flex flex-align-center">
-              <h4>x</h4>
-              <input @input="handleXChange" type="range" min="0" max="100" value="0" :value="operateX / canvasWidth * 100" class="range-slider" />
-            </div>
-            <div class="flex flex-align-center">
-              <h4>y</h4>
-              <input @input="handleYChange" type="range" min="0" max="100" value="0" :value="operateY / canvasWidth * 100" class="range-slider" />
-            </div>
-            <div class="flex flex-align-center">
-              <h4>rad</h4>
-              <input @input="handleRadChange" type="range" min="0" max="100" value="0" class="range-slider" />
-            </div>
-            <div class="flex flex-align-center">
-              <h4>scaleX</h4>
-              <input @input="handleScaleXChange" type="range" min="0" max="100" :value="(operateScaleX - 1) / 4 * 100" class="range-slider" />
-            </div>
-            <div class="flex flex-align-center">
-              <h4>scaleY</h4>
-              <input @input="handleScaleYChange" type="range" min="0" max="100" :value="(operateScaleY - 1) / 4 * 100" class="range-slider" />
-            </div>
-            <div class="flex flex-align-center">
               <h4>originX</h4>
               <input type="number" @input="handleOriginXChange" :value="operateOriginX" />
             </div>
@@ -97,10 +77,16 @@
           <h4>basic</h4>
           <div><span>mouse</span><span>x: {{mouse.x}}</span><span>y: {{mouse.y}}</span></div>
           <h4>ball</h4>
-          <div><span>translateX: </span> <span v-if="ball">{{ball.translateX}}</span></div>
-          <div><span>translateY: </span> <span v-if="ball">{{ball.translateY}}</span></div>
           <div><span>width: </span> <span v-if="ball">{{ball.width}}</span></div>
           <div><span>height: </span> <span v-if="ball">{{ball.height}}</span></div>
+          <strong>vertex</strong>
+          <div><span>p0: </span> <span v-if="ball">{{ball.vertex[0].x}}</span> <span v-if="ball">{{ball.vertex[0].y}}</span></div>
+          <div><span>p1: </span> <span v-if="ball">{{ball.vertex[1].x}}</span> <span v-if="ball">{{ball.vertex[1].y}}</span></div>
+          <div><span>p2: </span> <span v-if="ball">{{ball.vertex[2].x}}</span> <span v-if="ball">{{ball.vertex[2].y}}</span></div>
+          <div><span>p3: </span> <span v-if="ball">{{ball.vertex[3].x}}</span> <span v-if="ball">{{ball.vertex[3].y}}</span></div>
+          <strong>transform</strong>
+          <div><span>translateX: </span> <span v-if="ball">{{ball.translateX}}</span></div>
+          <div><span>translateY: </span> <span v-if="ball">{{ball.translateY}}</span></div>
           <div><span>rad: </span><span v-if="ball">{{ball.rad}} (angle: {{angle}})</span></div>
           <div><span>scaleX: </span><span v-if="ball">{{ball.scaleX}}</span></div>
           <div><span>scaleY: </span><span v-if="ball">{{ball.scaleY}}</span></div>
@@ -116,16 +102,20 @@
       }
       class Ball {
         constructor(ctx, opt) {
-          const { translateX = 0, translateY = 0, radius = 10, color = "red", rad = 0, scaleX = 1, scaleY = 1, originX = 0, originY = 0, width = 50, height = 50 } = opt
+          const { translateX = 0, translateY = 0, radius = 10, color = "black", rad = 0, scaleX = 1, scaleY = 1, originX = 0, originY = 0, width = 50, height = 50 } = opt
           this.ctx = ctx
+
           this.radius = radius
           this.lineWidth = 1
           this.color = color
 
-          this.translateX = translateX
-          this.translateY = translateY
+          // 基础信息
           this.width = width
           this.height = height
+          this.vertex = []
+          // transform信息
+          this.translateX = translateX
+          this.translateY = translateY
           this.rad = rad
           this.scaleX = scaleX
           this.scaleY = scaleY
@@ -158,6 +148,12 @@
           glMatrix.mat2d.multiply(resultMatrix, resultMatrix, scaleMatrix)
           glMatrix.mat2d.multiply(resultMatrix, resultMatrix, moveOriginMatrix)
 
+          let aa = resultMatrix[0],
+            ab = resultMatrix[1],
+            ac = resultMatrix[2],
+            ad = resultMatrix[3]
+          const det = aa * ad - ab * ac
+
           this.translateX = translateX
           this.translateY = translateY
           this.rad = rad
@@ -165,19 +161,52 @@
           this.scaleY = scaleY
           this.originX = originX
           this.originY = originY
-          this.matrix = resultMatrix
+
+           // 行列式为0，不能转置，会导致后面的计算出错，所以为0时不赋值（⚠️）
+          if (det) {
+            this.matrix = resultMatrix
+          }
         }
 
         /**
          * 判断是否在右下角顶点内
          * */
-        isOver(point) {
+        isOverBR(point) {
           const { x, y } = point
           const vec4 = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.matrix)
           const br = { x: 0, y: 0 }
           br.x = vec4[0] - this.originX
           br.y = vec4[1] - this.originY
           return distance(x, y, br.x, br.y) < this.radius + this.lineWidth
+        }
+
+        // 判断点是否在矩形内
+        isOverBody(point) {
+          const A = this.vertex[3] //左下顶点
+          const B = this.vertex[0] //左上顶点
+          const C = this.vertex[1] //右上顶点
+          const D = this.vertex[2] //右下顶点
+
+          const a = (B.x - A.x) * (point.y - A.y) - (B.y - A.y) * (point.x - A.x)
+          const b = (C.x - B.x) * (point.y - B.y) - (C.y - B.y) * (point.x - B.x)
+          const c = (D.x - C.x) * (point.y - C.y) - (D.y - C.y) * (point.x - C.x)
+          const d = (A.x - D.x) * (point.y - D.y) - (A.y - D.y) * (point.x - D.x)
+
+          if ((a > 0 && b > 0 && c > 0 && d > 0) || (a < 0 && b < 0 && c < 0 && d < 0)) {
+            return true
+          }
+          return false
+        }
+
+        // 判断是否在右下角顶点边缘
+        isOverBRPadding(point) {
+          const { x, y } = point
+          const padding = 20
+          const vec4 = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.matrix)
+          const br = { x: 0, y: 0 }
+          br.x = vec4[0] - this.originX
+          br.y = vec4[1] - this.originY
+          return distance(x, y, br.x, br.y) < this.radius + padding + this.lineWidth
         }
 
         get originPos() {
@@ -187,35 +216,56 @@
 
         draw() {
           // 画一个矩形
-          const vec1 = glMatrix.vec2.transformMat2d([], [0, 0], this.matrix)
-          const vec2 = glMatrix.vec2.transformMat2d([], [this.width, 0], this.matrix)
-          const vec3 = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.matrix)
-          const vec4 = glMatrix.vec2.transformMat2d([], [0, this.height], this.matrix)
+          const vec2_p0 = glMatrix.vec2.transformMat2d([], [0, 0], this.matrix)
+          const vec2_p1 = glMatrix.vec2.transformMat2d([], [this.width, 0], this.matrix)
+          const vec2_p2 = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.matrix)
+          const vec2_p3 = glMatrix.vec2.transformMat2d([], [0, this.height], this.matrix)
 
           this.ctx.save()
           this.ctx.lineWidth = this.lineWidth
 
-          // 绘制4个角
-          this.ctx.fillStyle = this.color
-          this.ctx.beginPath()
-          this.ctx.arc(vec1[0] - this.originX, vec1[1] - this.originY, this.radius, 0, 2 * Math.PI)
-          this.ctx.fill()
-          this.ctx.closePath()
+          const vertex = [
+            { x: vec2_p0[0] - this.originX, y: vec2_p0[1] - this.originY },
+            { x: vec2_p1[0] - this.originX, y: vec2_p1[1] - this.originY },
+            { x: vec2_p2[0] - this.originX, y: vec2_p2[1] - this.originY },
+            { x: vec2_p3[0] - this.originX, y: vec2_p3[1] - this.originY }
+          ]
+          this.vertex = vertex
 
+          // 绘制矩形
           this.ctx.beginPath()
-          this.ctx.arc(vec2[0] - this.originX, vec2[1] - this.originY, this.radius, 0, 2 * Math.PI)
-          this.ctx.fill()
+          this.ctx.lineWidth = "5"
+          this.ctx.moveTo(vertex[0].x, vertex[0].y)
+          for (let i = 0; i < vertex.length; i++) {
+            const point = vertex[i]
+            this.ctx.lineTo(point.x, point.y)
+          }
           this.ctx.closePath()
+          this.ctx.stroke()
 
-          this.ctx.beginPath()
-          this.ctx.arc(vec3[0] - this.originX, vec3[1] - this.originY, this.radius, 0, 2 * Math.PI)
-          this.ctx.fill()
-          this.ctx.closePath()
+          // 绘制4个顶点
+          for (let i = 0; i < vertex.length; i++) {
+            this.ctx.fillStyle = this.color
+            const point = vertex[i]
 
-          this.ctx.beginPath()
-          this.ctx.arc(vec4[0] - this.originX, vec4[1] - this.originY, this.radius, 0, 2 * Math.PI)
-          this.ctx.fill()
-          this.ctx.closePath()
+            // 可操作的顶点
+            if (i === 2) {
+              this.ctx.beginPath()
+              this.ctx.lineWidth = "10"
+              this.ctx.fillStyle = "white"
+              this.ctx.strokeStyle = "black"
+              this.ctx.arc(point.x, point.y, this.radius, 0, 2 * Math.PI)
+              this.ctx.stroke()
+              this.ctx.fill()
+              this.ctx.closePath()
+              continue
+            }
+
+            this.ctx.beginPath()
+            this.ctx.arc(point.x, point.y, this.radius, 0, 2 * Math.PI)
+            this.ctx.fill()
+            this.ctx.closePath()
+          }
 
           // 绘制原点
           this.ctx.beginPath()
@@ -237,11 +287,6 @@
             canvasHeight: 0,
             ctx: null,
 
-            operateX: 500,
-            operateY: 100,
-            operateRad: 0,
-            operateScaleX: 1,
-            operateScaleY: 1,
             operateOriginX: 0,
             operateOriginY: 0,
 
@@ -249,7 +294,14 @@
             mouse: { x: 0, y: 0 },
 
             isMouseDownBR: false,
-            BRLastOffset: { x: 0, y: 0 }
+            isMouseDownBody: false,
+            isMouseDownBRPadding: false,
+
+            // 缩放
+            downMouseOffset: { x: 0, y: 0 }, // 点击时鼠标位置
+            lastScale: [1, 1],
+            // 移动/旋转
+            lastMouseOffset: { x: 0, y: 0 } // 上一次鼠标位置
           }
         },
         computed: {
@@ -271,7 +323,13 @@
           this.canvasHeight = canvasHeight
 
           this.ctx = canvas.getContext("2d")
-          this.ball = new Ball(this.ctx, { translateX: this.operateX, translateY: this.operateY, rad: (45 * Math.PI) / 180, width: 100, height: 50 })
+          this.ball = new Ball(this.ctx, {
+            translateX: this.operateX,
+            translateY: this.operateY,
+            // rad: (45 * Math.PI) / 180,
+            width: 50,
+            height: 50
+          })
 
           canvas.addEventListener("mousedown", this.handleMouseDown)
           window.addEventListener("mousemove", this.handleMouseMove)
@@ -291,73 +349,95 @@
             requestAnimationFrame(this.render)
           },
           handleMouseDown(e) {
-            const isOverBR = this.isOverBR(e)
+            const isOverBR = this.ball.isOverBR(this.getMousePos(e))
+            const isOverBody = this.ball.isOverBody(this.getMousePos(e))
+            const isOverBRPadding = this.ball.isOverBRPadding(this.getMousePos(e))
+
             if (isOverBR && this.ball) {
-              // const vec4 = glMatrix.vec2.transformMat2d([], [0, 50], this.ball.matrix)
+              // 缩放
+              const vec2_p2 = this.ball.vertex[2]
               this.isMouseDownBR = true
-              this.BRLastOffset.x = this.mouse.x
-              this.BRLastOffset.y = this.mouse.y
+              this.downMouseOffset.x = vec2_p2.x
+              this.downMouseOffset.y = vec2_p2.y
+
+              this.lastScale = [this.ball.scaleX, this.ball.scaleY]
+            } else if (isOverBody && this.ball) {
+              // 移动
+              this.isMouseDownBody = true
+              this.lastMouseOffset.x = this.mouse.x
+              this.lastMouseOffset.y = this.mouse.y
+            } else if (isOverBRPadding && this.ball) {
+              // 旋转
+              this.isMouseDownBRPadding = true
+              this.lastMouseOffset.x = this.mouse.x
+              this.lastMouseOffset.y = this.mouse.y
             }
           },
           handleMouseMove(e) {
-            const isOverBR = this.isOverBR(e)
+            const isOverBR = this.ball.isOverBR(this.getMousePos(e))
+            const isOverBody = this.ball.isOverBody(this.getMousePos(e))
+            const isOverBRPadding = this.ball.isOverBRPadding(this.getMousePos(e))
+            const currentOffset = { x: this.mouse.x, y: this.mouse.y }
 
             if (isOverBR) {
               this.canvas.style.cursor = "se-resize"
+            } else if (isOverBody) {
+              this.canvas.style.cursor = "move"
+            } else if (isOverBRPadding) {
+              this.canvas.style.cursor = "crosshair"
             } else {
               this.canvas.style.cursor = ""
             }
 
-            // 缩放操作
             if (this.isMouseDownBR) {
-              const BRCurrentOffset = { x: this.mouse.x, y: this.mouse.y }
-              const { scaleX, scaleY } = this.calcBallScale(BRCurrentOffset, this.BRLastOffset)
+              // 缩放操作
+              const ballScale = this.calcBallScale(currentOffset, this.downMouseOffset)
+              if (ballScale) {
+                const { scaleX, scaleY } = ballScale
+                this.ball.transform({
+                  scaleX: this.lastScale[0] * scaleX,
+                  scaleY: this.lastScale[1] * scaleY
+                })
+              }
+            } else if (this.isMouseDownBody) {
+              // 移动操作
+              const vec2_delta = [currentOffset.x - this.lastMouseOffset.x, currentOffset.y - this.lastMouseOffset.y]
               this.ball.transform({
-                scaleX,
-                scaleY
+                translateX: this.ball.translateX + vec2_delta[0],
+                translateY: this.ball.translateY + vec2_delta[1]
               })
+              this.lastMouseOffset.x = currentOffset.x
+              this.lastMouseOffset.y = currentOffset.y
+            } else if (this.isMouseDownBRPadding) {
+              // 旋转操作
+              const last_rad = Math.atan2(this.lastMouseOffset.x - this.ball.originPos.x, this.lastMouseOffset.y - this.ball.originPos.y)
+              const cur_rad = Math.atan2(currentOffset.x - this.ball.originPos.x, currentOffset.y - this.ball.originPos.y)
+              this.ball.transform({
+                rad: this.ball.rad + (last_rad - cur_rad)
+              })
+              this.lastMouseOffset.x = currentOffset.x
+              this.lastMouseOffset.y = currentOffset.y
             }
           },
           handleMouseUp() {
             if (this.isMouseDownBR) {
               this.isMouseDownBR = false
+              this.lastScale = [this.ball.scaleX, this.ball.scaleY]
+            }
+            if (this.isMouseDownBody) {
+              this.isMouseDownBody = false
+            }
+            if (this.isMouseDownBRPadding) {
+              this.isMouseDownBRPadding = false
             }
           },
-          isOverBR(e) {
+          getMousePos(e) {
             this.mouse.x = (e.pageX - this.canvas.offsetLeft) * 2 // 2 is canvas hidpi ratio
             this.mouse.y = (e.pageY - this.canvas.offsetTop) * 2
-            return this.ball.isOver(this.mouse)
-          },
-
-          handleXChange(e) {
-            const percent = e.currentTarget.value / 100
-            this.operateX = this.canvasWidth * percent
-
-            this.ball.transform({ x: this.operateX })
-          },
-          handleYChange(e) {
-            const percent = e.currentTarget.value / 100
-            this.operateY = this.canvasWidth * percent
-
-            this.ball.transform({ y: this.operateY })
-          },
-          handleRadChange(e) {
-            const percent = e.currentTarget.value / 100
-            this.operateRad = 2 * Math.PI * percent
-
-            this.ball.transform({ rad: this.operateRad })
-          },
-          handleScaleXChange(e) {
-            const percent = e.currentTarget.value / 100
-            this.operateScaleX = percent * 4 + 1 // 1 ~ 5
-
-            this.ball.transform({ scaleX: this.operateScaleX })
-          },
-          handleScaleYChange(e) {
-            const percent = e.currentTarget.value / 100
-            this.operateScaleY = percent * 4 + 1 // 1 ~ 5
-
-            this.ball.transform({ scaleY: this.operateScaleY })
+            return {
+              x: this.mouse.x,
+              y: this.mouse.y
+            }
           },
           handleOriginXChange(e) {
             const v = Number(e.currentTarget.value)
@@ -370,20 +450,21 @@
             this.ball.transform({ originY: v })
           },
           handleOriginCenter() {
-            this.operateOriginX = -25
-            this.operateOriginY = -25
+            this.operateOriginX = -this.ball.width / 2
+            this.operateOriginY = -this.ball.height / 2
             this.ball.transform({ originX: this.operateOriginX, originY: this.operateOriginY })
           },
 
           // ---------------------- 工具函数 -----------------------
           calcBallScale(p1, p2) {
             const invert_matrix = glMatrix.mat2d.invert([], this.ball.matrix)
-            const vec2_origin = glMatrix.vec2.transformMat2d([], [this.ball.originPos.x + this.ball.originX, this.ball.originPos.y + this.ball.originY], invert_matrix)
-            const vec2_p1 = glMatrix.vec2.transformMat2d([], [p1.x, p1.y], invert_matrix) // BRCurrentOffset Last
+            if (!invert_matrix) {
+              return null
+            }
+            const vec2_origin = glMatrix.vec2.transformMat2d([], [this.ball.originPos.x, this.ball.originPos.y], invert_matrix)
+            const vec2_p1 = glMatrix.vec2.transformMat2d([], [p1.x, p1.y], invert_matrix) // currentOffset Last
             const vec2_p2 = glMatrix.vec2.transformMat2d([], [p2.x, p2.y], invert_matrix)
 
-            // const scaleRatioX = (p1.x - this.ball.originPos.x) / (p2.x - this.ball.originPos.x)
-            // const scaleRatioY = (p1.y - this.ball.originPos.y) / (p2.y - this.ball.originPos.y)
             const scaleRatioX = (vec2_p1[0] - vec2_origin[0]) / (vec2_p2[0] - vec2_origin[0])
             const scaleRatioY = (vec2_p1[1] - vec2_origin[1]) / (vec2_p2[1] - vec2_origin[1])
             return {
