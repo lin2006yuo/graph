@@ -97,8 +97,10 @@
           <h4>basic</h4>
           <div><span>mouse</span><span>x: {{mouse.x}}</span><span>y: {{mouse.y}}</span></div>
           <h4>ball</h4>
-          <div><span>x: </span> <span v-if="ball">{{ball.x}}</span></div>
-          <div><span>y: </span> <span v-if="ball">{{ball.y}}</span></div>
+          <div><span>translateX: </span> <span v-if="ball">{{ball.translateX}}</span></div>
+          <div><span>translateY: </span> <span v-if="ball">{{ball.translateY}}</span></div>
+          <div><span>width: </span> <span v-if="ball">{{ball.width}}</span></div>
+          <div><span>height: </span> <span v-if="ball">{{ball.height}}</span></div>
           <div><span>rad: </span><span v-if="ball">{{ball.rad}} (angle: {{angle}})</span></div>
           <div><span>scaleX: </span><span v-if="ball">{{ball.scaleX}}</span></div>
           <div><span>scaleY: </span><span v-if="ball">{{ball.scaleY}}</span></div>
@@ -114,14 +116,16 @@
       }
       class Ball {
         constructor(ctx, opt) {
-          const { x = 0, y = 0, radius = 10, color = "red", rad = 0, scaleX = 1, scaleY = 1, originX = 0, originY = 0 } = opt
+          const { translateX = 0, translateY = 0, radius = 10, color = "red", rad = 0, scaleX = 1, scaleY = 1, originX = 0, originY = 0, width = 50, height = 50 } = opt
           this.ctx = ctx
           this.radius = radius
           this.lineWidth = 1
           this.color = color
 
-          this.x = x
-          this.y = y
+          this.translateX = translateX
+          this.translateY = translateY
+          this.width = width
+          this.height = height
           this.rad = rad
           this.scaleX = scaleX
           this.scaleY = scaleY
@@ -129,18 +133,18 @@
           this.originY = originY
 
           this.matrix = glMatrix.mat2d.create()
-          this.transform({ x, y, rad, scaleX, scaleY, originX, originY })
+          this.transform({ translateX, translateY, rad, scaleX, scaleY, originX, originY })
         }
 
         transform(params) {
-          const { x = this.x, y = this.y, rad = this.rad, scaleX = this.scaleX, scaleY = this.scaleY, originX = this.originX, originY = this.originY } = params
+          const { translateX = this.translateX, translateY = this.translateY, rad = this.rad, scaleX = this.scaleX, scaleY = this.scaleY, originX = this.originX, originY = this.originY } = params
           const resultMatrix = glMatrix.mat2d.create()
 
           // 改变变换原点中心
           const moveOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [originX, originY])
 
           // 平移矩阵
-          const translateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [x, y])
+          const translateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [translateX, translateY])
 
           // 旋转矩阵
           const rotateMatrix = glMatrix.mat2d.rotate([], glMatrix.mat2d.create(), rad)
@@ -154,8 +158,8 @@
           glMatrix.mat2d.multiply(resultMatrix, resultMatrix, scaleMatrix)
           glMatrix.mat2d.multiply(resultMatrix, resultMatrix, moveOriginMatrix)
 
-          this.x = x
-          this.y = y
+          this.translateX = translateX
+          this.translateY = translateY
           this.rad = rad
           this.scaleX = scaleX
           this.scaleY = scaleY
@@ -169,7 +173,7 @@
          * */
         isOver(point) {
           const { x, y } = point
-          const vec4 = glMatrix.vec2.transformMat2d([], [50, 50], this.matrix)
+          const vec4 = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.matrix)
           const br = { x: 0, y: 0 }
           br.x = vec4[0] - this.originX
           br.y = vec4[1] - this.originY
@@ -184,9 +188,9 @@
         draw() {
           // 画一个矩形
           const vec1 = glMatrix.vec2.transformMat2d([], [0, 0], this.matrix)
-          const vec2 = glMatrix.vec2.transformMat2d([], [50, 0], this.matrix)
-          const vec3 = glMatrix.vec2.transformMat2d([], [50, 50], this.matrix)
-          const vec4 = glMatrix.vec2.transformMat2d([], [0, 50], this.matrix)
+          const vec2 = glMatrix.vec2.transformMat2d([], [this.width, 0], this.matrix)
+          const vec3 = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.matrix)
+          const vec4 = glMatrix.vec2.transformMat2d([], [0, this.height], this.matrix)
 
           this.ctx.save()
           this.ctx.lineWidth = this.lineWidth
@@ -267,7 +271,7 @@
           this.canvasHeight = canvasHeight
 
           this.ctx = canvas.getContext("2d")
-          this.ball = new Ball(this.ctx, { x: this.operateX, y: this.operateY })
+          this.ball = new Ball(this.ctx, { translateX: this.operateX, translateY: this.operateY, rad: (45 * Math.PI) / 180, width: 100, height: 50 })
 
           canvas.addEventListener("mousedown", this.handleMouseDown)
           window.addEventListener("mousemove", this.handleMouseMove)
@@ -288,7 +292,8 @@
           },
           handleMouseDown(e) {
             const isOverBR = this.isOverBR(e)
-            if (isOverBR) {
+            if (isOverBR && this.ball) {
+              // const vec4 = glMatrix.vec2.transformMat2d([], [0, 50], this.ball.matrix)
               this.isMouseDownBR = true
               this.BRLastOffset.x = this.mouse.x
               this.BRLastOffset.y = this.mouse.y
@@ -303,23 +308,20 @@
               this.canvas.style.cursor = ""
             }
 
-            // 缩放操作 
+            // 缩放操作
             if (this.isMouseDownBR) {
               const BRCurrentOffset = { x: this.mouse.x, y: this.mouse.y }
-              const scaleRatioX = (BRCurrentOffset.x - this.ball.originPos.x) / (this.BRLastOffset.x - this.ball.originPos.x)
-              const scaleRatioY = (BRCurrentOffset.y - this.ball.originPos.y) / (this.BRLastOffset.y - this.ball.originPos.y)
+              const { scaleX, scaleY } = this.calcBallScale(BRCurrentOffset, this.BRLastOffset)
               this.ball.transform({
-                scaleX: scaleRatioX,
-                scaleY: scaleRatioY
+                scaleX,
+                scaleY
               })
-              // const offset = [BRCurrentOffset.x - this.BRLastOffset.x, BRCurrentOffset.y - this.BRLastOffset.y]
-              // const scaleRatio = { x: offset[0] /, y: 1 }
-              // this.BRLastOffset.x = BRCurrentOffset.x
-              // this.BRLastOffset.y = BRCurrentOffset.y
             }
           },
           handleMouseUp() {
-            this.isMouseDownBR = false
+            if (this.isMouseDownBR) {
+              this.isMouseDownBR = false
+            }
           },
           isOverBR(e) {
             this.mouse.x = (e.pageX - this.canvas.offsetLeft) * 2 // 2 is canvas hidpi ratio
@@ -371,6 +373,23 @@
             this.operateOriginX = -25
             this.operateOriginY = -25
             this.ball.transform({ originX: this.operateOriginX, originY: this.operateOriginY })
+          },
+
+          // ---------------------- 工具函数 -----------------------
+          calcBallScale(p1, p2) {
+            const invert_matrix = glMatrix.mat2d.invert([], this.ball.matrix)
+            const vec2_origin = glMatrix.vec2.transformMat2d([], [this.ball.originPos.x + this.ball.originX, this.ball.originPos.y + this.ball.originY], invert_matrix)
+            const vec2_p1 = glMatrix.vec2.transformMat2d([], [p1.x, p1.y], invert_matrix) // BRCurrentOffset Last
+            const vec2_p2 = glMatrix.vec2.transformMat2d([], [p2.x, p2.y], invert_matrix)
+
+            // const scaleRatioX = (p1.x - this.ball.originPos.x) / (p2.x - this.ball.originPos.x)
+            // const scaleRatioY = (p1.y - this.ball.originPos.y) / (p2.y - this.ball.originPos.y)
+            const scaleRatioX = (vec2_p1[0] - vec2_origin[0]) / (vec2_p2[0] - vec2_origin[0])
+            const scaleRatioY = (vec2_p1[1] - vec2_origin[1]) / (vec2_p2[1] - vec2_origin[1])
+            return {
+              scaleX: scaleRatioX,
+              scaleY: scaleRatioY
+            }
           }
         }
       })
