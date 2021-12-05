@@ -5,7 +5,7 @@
 ---
 ### 选择框 [demo](https://graph-three.vercel.app/test/matrix/index.html)  
 基本版本 [demo](https://graph-three.vercel.app/test/matrix/index-basic.html)   
-拖拽版本 [demo](https://graph-three.vercel.app/test/matrix/index-basic.html) 
+拖拽版本 [demo](https://graph-three.vercel.app/test/matrix/index-gesture.html) 
 > 矩阵变换
 
 
