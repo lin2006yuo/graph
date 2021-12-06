@@ -28,6 +28,8 @@ class Ball {
             let tx = mouse.x + Math.cos(angle) * 30;
             let ty = mouse.y + Math.sin(angle) * 30;
 
+            console.log({ mx: mouse.x, tx, x: this.x })
+
             this.vx += tx - this.x;
             this.vy += ty - this.y;
         }

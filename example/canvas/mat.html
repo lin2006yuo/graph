@@ -143,7 +143,6 @@
           this.mat_t = m3.normalize();
           this.mat_r = m3.normalize();
           this.mat_s = m3.normalize();
-          this.last_mat_s = m3.normalize();
           this.rotate = 0 // rad
         }
         get pos() {
@@ -274,20 +273,26 @@
 
             // 基于右下角点缩放
             if(this.isMouseDown3) {
-              console.log(this.translateX)
-              let d3 = m3.multiplyPoint(m3.rotation(this.dot1.rotate), [this.dot3.originX, this.dot3.originY, 1])
-              d3 = m3.multiplyPoint(m3.translation(this.translateX, this.translateY), d3)
-              let delta = [this.mouse.x - d3[0], this.mouse.y - d3[1], 1]
-              delta = m3.multiplyPoint(m3.rotation(-this.dot1.rotate), delta)
+              // let delta = [this.mouse.x - this.lastMouse.x, this.mouse.y - this.lastMouse.y, 1]
+              // delta = m3.multiplyPoint(m3.rotation(-this.dot1.rotate), delta)
+              const origin = [this.dot1.pos.x, this.dot1.pos.y]
+              const sx = (this.mouse.x - origin[0]) / (this.lastMouse.x- origin[0])
+              const sy = (this.mouse.y - origin[1]) / (this.lastMouse.y- origin[1])
+              console.log(origin)
+
+              for (let i = 1; i <= 5; i++) {
+                const mat_s = m3.scaling(sx, sy)
+                const new_mat = m3.multiply(this[`dot${i}`].mat_s, mat_s)
+                this[`dot${i}`].mat_s = new_mat
+              }
 
               const dx = (this.width + delta[0]) / this.width
               const dy = (this.height + delta[1]) / this.height
 
-              const d_mat = m3.scaling(dx, dy)
-              for (let i = 1; i <= 5; i++) {
-                const new_mat = m3.multiply(this[`dot${i}`].mat_s, d_mat)
-                this[`dot${i}`].mat_s = d_mat
-              }
+              // this.dot2.originX = this.dot2.originX + delta[0]
+              // this.dot3.originX = this.dot3.originX + delta[0]; this.dot3.originY = this.dot3.originY + delta[1]
+              // this.dot5.originX = this.dot5.originX + delta[0]; this.dot5.originY = this.dot5.originY + delta[1]
+              // this.dot4.originY = this.dot4.originY + delta[1]
 
               console.log(this.dot1.mat_s)
 
@@ -366,7 +371,7 @@
       const ctx = canvas.getContext('2d');
       const mouse = utils.mouse(canvas);
 
-      const rect = new Rect(0, 0, 100, 100, {
+      const rect = new Rect(0, 0, 30, 30, {
         mouse,
         canvas
       });
