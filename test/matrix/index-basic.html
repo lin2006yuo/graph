@@ -7,7 +7,7 @@
     <title>Matrix - Basic</title>
     <script src="../glMatrix.js"></script>
     <script src="../size.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="./vue.mini.js"></script>
   </head>
   <style>
     body,
@@ -104,6 +104,22 @@
           <div><span>scaleY: </span><span v-if="ball">{{ball.scaleY}}</span></div>
           <div><span>originX: </span><span v-if="ball">{{ball.originX}}</span></div>
           <div><span>originY: </span><span v-if="ball">{{ball.originY}}</span></div>
+
+          <div style="display: flex;">
+            <div>
+              <div><span>LT: </span><span v-if="ball">x:{{ball.LT.x}} y:{{ball.LT.y}}</span></div>
+              <div><span>RT: </span><span v-if="ball">x:{{ball.RT.x}} y:{{ball.RT.y}}</span></div>
+              <div><span>RB: </span><span v-if="ball">x:{{ball.RB.x}} y:{{ball.RB.y}}</span></div>
+              <div><span>LB: </span><span v-if="ball">x:{{ball.LB.x}} y:{{ball.LB.y}}</span></div>
+            </div>
+  
+            <div style="margin-left: 50px;">
+              <div><span>LT_I: </span><span v-if="ball">x:{{ball.LT_I.x}} y:{{ball.LT_I.y}}</span></div>
+              <div><span>RT_I: </span><span v-if="ball">x:{{ball.RT_I.x}} y:{{ball.RT_I.y}}</span></div>
+              <div><span>RB_I: </span><span v-if="ball">x:{{ball.RB_I.x}} y:{{ball.RB_I.y}}</span></div>
+              <div><span>LB_I: </span><span v-if="ball">x:{{ball.LB_I.x}} y:{{ball.LB_I.y}}</span></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -124,7 +140,18 @@
           this.originX = originX
           this.originY = originY
 
+          this.LT = { x: 0, y: 0 }
+          this.LB = { x: 0, y: 0 }
+          this.RT = { x: 0, y: 0 }
+          this.RB = { x: 0, y: 0 }
+
+          this.LT_I = { x: 0, y: 0 }
+          this.LB_I = { x: 0, y: 0 }
+          this.RT_I = { x: 0, y: 0 }
+          this.RB_I = { x: 0, y: 0 }
+
           this.matrix = glMatrix.mat2d.create()
+          this.invertMatrix = glMatrix.mat2d.create()
           this.transform({ x, y, rad, scaleX, scaleY, originX, originY })
         }
 
@@ -149,6 +176,8 @@
           glMatrix.mat2d.multiply(resultMatrix, translateMatrix, rotateMatrix) // 先平移再旋转
           glMatrix.mat2d.multiply(resultMatrix, resultMatrix, scaleMatrix)
           glMatrix.mat2d.multiply(resultMatrix, resultMatrix, moveOriginMatrix)
+          const resultInvertMatrix = glMatrix.mat2d.create()
+          glMatrix.mat2d.invert(resultInvertMatrix, resultMatrix)
 
           this.x = x
           this.y = y
@@ -158,6 +187,7 @@
           this.originX = originX
           this.originY = originY
           this.matrix = resultMatrix
+          this.invertMatrix = resultInvertMatrix
         }
 
         draw() {
@@ -168,27 +198,49 @@
           const vec4 = glMatrix.vec2.transformMat2d([], [0, 50], this.matrix)
           const vec_origin = glMatrix.vec2.transformMat2d([], [-this.originX, -this.originY], this.matrix)
 
+          const vec1Invert = glMatrix.vec2.transformMat2d([], [0, 0], this.invertMatrix)
+          const vec2Invert = glMatrix.vec2.transformMat2d([], [50, 0], this.invertMatrix)
+          const vec3Invert = glMatrix.vec2.transformMat2d([], [50, 50], this.invertMatrix)
+          const vec4Invert = glMatrix.vec2.transformMat2d([], [0, 50], this.invertMatrix)
+
+          this.LT_I.x = vec1Invert[0] - this.originX
+          this.LT_I.y = vec1Invert[1] - this.originY
+          this.RT_I.x = vec2Invert[0] - this.originX
+          this.RT_I.y = vec2Invert[1] - this.originY
+          this.RB_I.x = vec3Invert[0] - this.originX
+          this.RB_I.y = vec3Invert[1] - this.originY
+          this.LB_I.x = vec4Invert[0] - this.originX
+          this.LB_I.y = vec4Invert[1] - this.originY
           this.ctx.save()
 
           // 绘制4个角
           this.ctx.fillStyle = this.color
           this.ctx.beginPath()
-          this.ctx.arc(vec1[0] - this.originX, vec1[1] - this.originY, this.radius, 0, 2 * Math.PI)
+          this.LT.x = vec1[0] - this.originX
+          this.LT.y = vec1[1] - this.originY
+          this.ctx.arc(this.LT.x, this.LT.y, this.radius, 0, 2 * Math.PI)
           this.ctx.fill()
           this.ctx.closePath()
 
           this.ctx.beginPath()
-          this.ctx.arc(vec2[0] - this.originX, vec2[1] - this.originY, this.radius, 0, 2 * Math.PI)
+          this.RT.x = vec2[0] - this.originX
+          this.RT.y = vec2[1] - this.originY
+          this.ctx.arc(this.RT.x, this.RT.y, this.radius, 0, 2 * Math.PI)
           this.ctx.fill()
           this.ctx.closePath()
 
           this.ctx.beginPath()
-          this.ctx.arc(vec3[0] - this.originX, vec3[1] - this.originY, this.radius, 0, 2 * Math.PI)
+
+          this.RB.x = vec3[0] - this.originX
+          this.RB.y = vec3[1] - this.originY
+          this.ctx.arc(this.RB.x, this.RB.y, this.radius, 0, 2 * Math.PI)
           this.ctx.fill()
           this.ctx.closePath()
 
           this.ctx.beginPath()
-          this.ctx.arc(vec4[0] - this.originX, vec4[1] - this.originY, this.radius, 0, 2 * Math.PI)
+          this.LB.x = vec4[0] - this.originX
+          this.LB.y = vec4[1] - this.originY
+          this.ctx.arc(this.LB.x, this.LB.y, this.radius, 0, 2 * Math.PI)
           this.ctx.fill()
           this.ctx.closePath()
 
@@ -213,36 +265,36 @@
             ctx: null,
 
             operateX: 500,
-            operateY: 100,
-            operateRad: 0,
+            operateY: 500,
+            operateRad: 45 * Math.PI / 180,
             operateScaleX: 1,
             operateScaleY: 1,
             operateOriginX: 0,
             operateOriginY: 0,
 
-            ball: null
+            ball: null,
           }
         },
         computed: {
           angle() {
             return (360 * this.ball.rad) / (2 * Math.PI)
-          }
+          },
         },
         mounted() {
           const {
             canvas,
             width: canvasWidth,
-            height: canvasHeight
+            height: canvasHeight,
           } = new KSize("canvas", {
             width: 500,
-            height: 500
+            height: 500,
           })
           this.canvas = canvas
           this.canvasWidth = canvasWidth
           this.canvasHeight = canvasHeight
 
           this.ctx = canvas.getContext("2d")
-          this.ball = new Ball(this.ctx, { x: this.operateX, y: this.operateY })
+          this.ball = new Ball(this.ctx, { x: this.operateX, y: this.operateY, rad: this.operateRad })
 
           this.render()
         },
@@ -250,7 +302,24 @@
           render() {
             this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
             this.ball.draw()
+            this.drawLine();
             requestAnimationFrame(this.render)
+          },
+
+          // 画对角线
+          drawLine() {
+            this.ctx.save();
+
+            this.ctx.strokeColor = '#000';
+            this.ctx.moveTo(0,0);
+            this.ctx.lineTo(1000,1000);
+
+            this.ctx.moveTo(1000,0);
+            this.ctx.lineTo(0,1000);
+
+            this.ctx.stroke();
+
+            this.ctx.restore()
           },
 
           handleXChange(e) {
@@ -297,8 +366,8 @@
             this.operateOriginX = -25
             this.operateOriginY = -25
             this.ball.transform({ originX: this.operateOriginX, originY: this.operateOriginY })
-          }
-        }
+          },
+        },
       })
     </script>
   </body>
