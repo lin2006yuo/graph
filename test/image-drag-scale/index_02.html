@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matrix - Basic</title>
+    <script src="../glMatrix.js"></script>
+    <script src="../size_plus.js"></script>
+    <script src="../matrix/vue.mini.js"></script>
+  </head>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    #app {
+    }
+  </style>
+  <body>
+    <div id="app">
+      <canvas id="canvas"></canvas>
+      <div>
+        <h4>basic</h4>
+        <div>
+          <span>canvas</span>
+          <span>width: {{canvasWidth}}</span>
+          <span>height: {{canvasHeight}}</span>
+        </div>
+        <div v-if="img">
+          <span>img</span>
+          <span>width: {{img.naturalWidth}}</span>
+          <span>height: {{img.naturalHeight}}</span>
+        </div>
+        <h4>crop</h4>
+        <div>
+          <span>crop</span>
+          <span>width: {{cropWidth}}</span>
+          <span>height: {{cropHeight}}</span>
+        </div>
+        <div style="display: flex">
+          <div style="margin-right: 20px">
+            <div>leftUpper: [{{cropperInnerRect.leftUpper.x}}, {{cropperInnerRect.leftUpper.y}}]</div>
+            <div>rightUpper: [{{cropperInnerRect.rightUpper.x}}, {{cropperInnerRect.rightUpper.y}}]</div>
+            <div>rightLower: [{{cropperInnerRect.rightLower.x}}, {{cropperInnerRect.rightLower.y}}]</div>
+            <div>leftLower: [{{cropperInnerRect.leftLower.x}}, {{cropperInnerRect.leftLower.y}}]</div>
+          </div>
+          <div>
+            <div>leftUpper: [{{backgroundCropperInnerRect.leftUpper.x}}, {{backgroundCropperInnerRect.leftUpper.y}}]</div>
+            <div>rightUpper: [{{backgroundCropperInnerRect.rightUpper.x}}, {{backgroundCropperInnerRect.rightUpper.y}}]</div>
+            <div>rightLower: [{{backgroundCropperInnerRect.rightLower.x}}, {{backgroundCropperInnerRect.rightLower.y}}]</div>
+            <div>leftLower: [{{backgroundCropperInnerRect.leftLower.x}}, {{backgroundCropperInnerRect.leftLower.y}}]</div>
+          </div>
+        </div>
+
+        <h4>Mouse</h4>
+        <div>
+          <span>mouse</span>
+          <span>x: {{mouse.x}}</span>
+          <span>y: {{mouse.y}}</span>
+        </div>
+        <div>
+          <span>background mouse</span>
+          <span>x: {{backgroundMouse.x}}</span>
+          <span>y: {{backgroundMouse.y}}</span>
+        </div>
+        <div>
+          <span>background mouse2</span>
+          <span>x: {{backgroundMouse2.x}}</span>
+          <span>y: {{backgroundMouse2.y}}</span>
+        </div>
+        <div>
+          <span>background last mouse</span>
+          <span>x: {{backgroundLastMouse.x}}</span>
+          <span>y: {{backgroundLastMouse.y}}</span>
+        </div>
+
+        <h4>background</h4>
+        <div>
+          <span>scale {{scale}}</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let vm = new Vue({
+        el: "#app",
+        data() {
+          return {
+            canvas: null,
+            canvasWidth: 0,
+            canvasHeight: 0,
+            ctx: null,
+            ksize: null,
+            img: null,
+
+            cropperInnerRect: {
+              leftUpper: { x: 0, y: 0 },
+              rightUpper: { x: 0, y: 0 },
+              rightLower: { x: 0, y: 0 },
+              leftLower: { x: 0, y: 0 },
+            },
+            cropWidth: 0,
+            cropHeight: 0,
+            boundary: {
+              left: 0,
+              top: 0,
+              right: 0,
+              bottom: 0,
+            },
+            limit: { top: 0, bottom: 0, left: 0, right: 0 },
+
+            backgroundResizeMatrix: glMatrix.mat2d.create(),
+            backgroundScaleMatrix: glMatrix.mat2d.create(),
+            backgroundTranslateMatrix: glMatrix.mat2d.create(),
+            backgroundResultMatrix: glMatrix.mat2d.create(),
+
+            scale: 1,
+
+            mouse: { x: 0, y: 0 },
+
+            backgroundMouse: { x: 0, y: 0 },
+            backgroundLastMouse: { x: 0, y: 0 },
+            isMousedown: false,
+          }
+        },
+        computed: {
+          backgroundCropperInnerRect() {
+            return {}
+          },
+          backgroundMouse2() {
+            const result = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundScaleMatrix)
+            glMatrix.mat2d.multiply(result, result, this.backgroundTranslateMatrix)
+
+            const invert = glMatrix.mat2d.invert([], result)
+            const vec2_point = glMatrix.vec2.transformMat2d([], [this.mouse.x, this.mouse.y], invert)
+            return { x: vec2_point[0], y: vec2_point[1] }
+          },
+          backgroundCropperInnerRect() {
+            const result = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundScaleMatrix)
+            glMatrix.mat2d.multiply(result, result, this.backgroundTranslateMatrix)
+
+            const invert = glMatrix.mat2d.invert([], result)
+            const { leftUpper, rightUpper, rightLower, leftLower } = this.cropperInnerRect
+
+            const vec2_leftUpper = glMatrix.vec2.transformMat2d([], [leftUpper.x, leftUpper.y], invert)
+            const vec2_rightUpper = glMatrix.vec2.transformMat2d([], [rightUpper.x, rightUpper.y], invert)
+            const vec2_rightLower = glMatrix.vec2.transformMat2d([], [rightLower.x, rightLower.y], invert)
+            const vec2_leftLower = glMatrix.vec2.transformMat2d([], [leftLower.x, leftLower.y], invert)
+
+            return {
+              leftUpper: { x: vec2_leftUpper[0], y: vec2_leftUpper[1] },
+              rightUpper: { x: vec2_rightUpper[0], y: vec2_rightUpper[1] },
+              rightLower: { x: vec2_rightLower[0], y: vec2_rightLower[1] },
+              leftLower: { x: vec2_leftLower[0], y: vec2_leftLower[1] },
+            }
+          },
+        },
+        mounted() {
+          const ksize = new KSize("canvas")
+          const { canvas, width: canvasWidth, height: canvasHeight } = ksize
+          this.canvas = canvas
+          this.canvasWidth = canvasWidth
+          this.canvasHeight = canvasHeight
+          this.ksize = ksize
+
+          this.ctx = canvas.getContext("2d")
+
+          window.addEventListener("resize", this.resize)
+          window.addEventListener("mousemove", this.handleMouseMove)
+          this.canvas.addEventListener("mousedown", this.handleMousedown)
+          window.addEventListener("mouseup", this.handleMouseup)
+          this.canvas.addEventListener("mousewheel", this.handleMouseWheel)
+
+          this.loadImage()
+          this.render()
+        },
+        methods: {
+          loadImage() {
+            const img = new Image()
+            img.src = "./03.jpg"
+            img.onload = () => {
+              this.img = img
+              this.boundary.right = img.naturalWidth
+              this.boundary.bottom = img.naturalHeight
+            }
+          },
+          // 绘制裁剪框
+          drawCropFrame() {
+            let width = this.canvasWidth * 0.8
+            let height = this.canvasHeight * 0.8
+            const canvasRatio = width / height
+            // 裁剪框比例
+            const ratio = 16 / 9
+            if (ratio > canvasRatio) {
+              height = width / ratio
+            } else {
+              width = height * ratio
+            }
+
+            const { ctx } = this
+            ctx.save()
+            ctx.fillStyle = "rgba(0,0,0,0.5)"
+            // ctx.lineWidth = 10
+
+            const resultMatrix = this.translateToCenter(width, height)
+            const cropperInnerRect = {
+              leftUpper: { x: 0, y: 0 },
+              rightUpper: { x: width, y: 0 },
+              rightLower: { x: width, y: height },
+              leftLower: { x: 0, y: height },
+            }
+            const { leftLower, rightLower, leftUpper, rightUpper } = cropperInnerRect
+            const vec2_p0 = glMatrix.vec2.transformMat2d([], [leftUpper.x, leftUpper.y], resultMatrix)
+            leftUpper.x = vec2_p0[0]
+            leftUpper.y = vec2_p0[1]
+            const vec2_p1 = glMatrix.vec2.transformMat2d([], [rightUpper.x, rightUpper.y], resultMatrix)
+            rightUpper.x = vec2_p1[0]
+            rightUpper.y = vec2_p1[1]
+            const vec2_p2 = glMatrix.vec2.transformMat2d([], [rightLower.x, rightLower.y], resultMatrix)
+            rightLower.x = vec2_p2[0]
+            rightLower.y = vec2_p2[1]
+            const vec2_p3 = glMatrix.vec2.transformMat2d([], [leftLower.x, leftLower.y], resultMatrix)
+            leftLower.x = vec2_p3[0]
+            leftLower.y = vec2_p3[1]
+            this.cropperInnerRect = cropperInnerRect
+
+            ctx.beginPath()
+
+            ctx.moveTo(0, 0)
+            ctx.lineTo(this.canvasWidth, 0)
+            ctx.lineTo(this.canvasWidth, this.canvasHeight)
+            ctx.lineTo(0, this.canvasHeight)
+            ctx.lineTo(0, 0)
+            ctx.closePath()
+
+            ctx.moveTo(leftUpper.x, leftUpper.y)
+            ctx.lineTo(leftLower.x, leftLower.y)
+            ctx.lineTo(rightLower.x, rightLower.y)
+            ctx.lineTo(rightUpper.x, rightUpper.y)
+            ctx.lineTo(leftUpper.x, leftUpper.y)
+            ctx.closePath()
+
+            ctx.fill()
+            ctx.stroke()
+
+            ctx.restore()
+
+            // 记录数据
+            this.cropWidth = width
+            this.cropHeight = height
+          },
+          // 绘制图片
+          calcImage() {
+            if (!this.img) {
+              throw Error("no img")
+            }
+            const { ctx } = this
+            ctx.save()
+
+            const resultMatrix = glMatrix.mat2d.create()
+            const centerOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [-this.img.naturalWidth / 2, -this.img.naturalHeight / 2])
+            const translateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [this.canvasWidth / 2, this.canvasHeight / 2])
+
+            const cropRatio = this.cropWidth / this.cropHeight
+            const backgroundRatio = this.img.naturalWidth / this.img.naturalHeight
+
+            // 1. object-fit: cover
+            let coverScale = 0
+            if (cropRatio > backgroundRatio) {
+              coverScale = this.cropWidth / this.img.naturalWidth
+            } else {
+              coverScale = this.cropHeight / this.img.naturalHeight
+            }
+            const scaleMatrix = glMatrix.mat2d.scale([], glMatrix.mat2d.create(), [coverScale, coverScale])
+            glMatrix.mat2d.multiply(resultMatrix, translateMatrix, scaleMatrix)
+            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, centerOriginMatrix)
+
+            this.backgroundResizeMatrix = resultMatrix
+          },
+          renderImage() {
+            const resultMatrix = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundScaleMatrix)
+            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, this.backgroundTranslateMatrix)
+            const { ctx } = this
+            ctx.save()
+            ctx.transform(...resultMatrix)
+            ctx.drawImage(this.img, 0, 0, this.img.naturalWidth, this.img.naturalHeight, 0, 0, this.img.naturalWidth, this.img.naturalHeight)
+            ctx.restore()
+          },
+          /**
+           *  移动到画布中心
+           *  @param width 对象宽度
+           *  @param height 对象高度
+           *
+           * */
+          translateToCenter(width, height) {
+            const resultMatrix = glMatrix.mat2d.create()
+            // 矩形中心作为原点
+            const moveOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [-width / 2, -height / 2])
+            // 平移到canvas中心
+            const translateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [this.canvasWidth / 2, this.canvasHeight / 2])
+            glMatrix.mat2d.multiply(resultMatrix, translateMatrix, moveOriginMatrix)
+            return resultMatrix
+          },
+          handleMousedown(e) {
+            this.backgroundLastMouse.x = this.backgroundMouse.x
+            this.backgroundLastMouse.y = this.backgroundMouse.y
+            this.isMousedown = true
+
+            this.limit = {
+              left: this.backgroundCropperInnerRect.leftUpper.x + this.backgroundTranslateMatrix[4],
+              right: this.backgroundCropperInnerRect.rightUpper.x - this.boundary.right + this.backgroundTranslateMatrix[4],
+              top: this.backgroundCropperInnerRect.leftUpper.y + this.backgroundTranslateMatrix[5],
+              bottom: this.backgroundCropperInnerRect.leftLower.y - this.boundary.bottom + this.backgroundTranslateMatrix[5],
+            }
+          },
+          handleMouseup() {
+            this.isMousedown = false
+          },
+          handleMouseMove(e) {
+            this.mouse.x = (e.pageX - this.canvas.offsetLeft) * 2
+            this.mouse.y = (e.pageY - this.canvas.offsetTop) * 2
+
+            const resultInvertMatrix = glMatrix.mat2d.invert([], glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundScaleMatrix))
+            const invertMouse = glMatrix.vec2.transformMat2d([], [this.mouse.x, this.mouse.y], resultInvertMatrix)
+            this.backgroundMouse.x = invertMouse[0]
+            this.backgroundMouse.y = invertMouse[1]
+
+            if (this.isMousedown) {
+              const mouseMoveDelta = { x: this.backgroundMouse.x - this.backgroundLastMouse.x, y: this.backgroundMouse.y - this.backgroundLastMouse.y }
+
+              const result = glMatrix.mat2d.translate([], this.backgroundTranslateMatrix, [mouseMoveDelta.x, mouseMoveDelta.y])
+
+              const translateXLimit = clamp(result[4], this.limit.left, this.limit.right)
+              const translateYLimit = clamp(result[5], this.limit.top, this.limit.bottom)
+
+              result[4] = translateXLimit
+              result[5] = translateYLimit
+              this.backgroundTranslateMatrix = result
+
+              this.backgroundLastMouse.x = this.backgroundMouse.x
+              this.backgroundLastMouse.y = this.backgroundMouse.y
+            }
+          },
+          handleMouseWheel(e) {
+            if (e.wheelDelta > 0) {
+              this.scale *= 1.1
+            } else {
+              this.scale *= 1 / 1.1
+              if (this.scale < 1) {
+                this.scale = 1
+              }
+            }
+
+            // 2. 根据鼠标位置缩放
+            const mouseResultMatrix = glMatrix.mat2d.create()
+            // const mouseOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [-zoomCenter[0], -zoomCenter[1]])
+            // const mouseTranslateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [zoomCenter[0], zoomCenter[1]])
+            const mouseOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [-this.backgroundMouse.x, -this.backgroundMouse.y])
+            const mouseTranslateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [this.backgroundMouse.x, this.backgroundMouse.y])
+            const scaleBackgroundMatrix = glMatrix.mat2d.scale([], glMatrix.mat2d.create(), [this.scale, this.scale])
+            glMatrix.mat2d.multiply(mouseResultMatrix, mouseTranslateMatrix, scaleBackgroundMatrix)
+            glMatrix.mat2d.multiply(this.backgroundScaleMatrix, mouseResultMatrix, mouseOriginMatrix)
+          },
+          render() {
+            this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
+            if (this.img) {
+              this.calcImage()
+              this.renderImage()
+            }
+            // this.img && this.drawImage()
+            this.drawCropFrame()
+            requestAnimationFrame(this.render)
+          },
+          resize() {
+            this.canvasWidth = this.ksize.width
+            this.canvasHeight = this.ksize.height
+          },
+        },
+      })
+    </script>
+    <script>
+      function clamp(value, minValue, maxValue) {
+        if (minValue > maxValue) {
+          ;[minValue, maxValue] = [maxValue, minValue]
+        }
+
+        return Math.max(minValue, Math.min(value, maxValue))
+      }
+    </script>
+  </body>
+</html>
