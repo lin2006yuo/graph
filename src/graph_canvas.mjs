@@ -858,6 +858,7 @@ export class GraphCanvas {
     e.dragging = this.last_mouse_dragging
 
     if (this.dragging_canvas) {
+      console.log(this.ds.offset)
       this.ds.offset[0] += delta[0] / this.ds.scale
       this.ds.offset[1] += delta[1] / this.ds.scale
       this.dirty_canvas = true
