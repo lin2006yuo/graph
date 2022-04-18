@@ -203,14 +203,14 @@
           const vec3Invert = glMatrix.vec2.transformMat2d([], [50, 50], this.invertMatrix)
           const vec4Invert = glMatrix.vec2.transformMat2d([], [0, 50], this.invertMatrix)
 
-          this.LT_I.x = vec1Invert[0] - this.originX
-          this.LT_I.y = vec1Invert[1] - this.originY
-          this.RT_I.x = vec2Invert[0] - this.originX
-          this.RT_I.y = vec2Invert[1] - this.originY
-          this.RB_I.x = vec3Invert[0] - this.originX
-          this.RB_I.y = vec3Invert[1] - this.originY
-          this.LB_I.x = vec4Invert[0] - this.originX
-          this.LB_I.y = vec4Invert[1] - this.originY
+          this.LT_I.x = vec1Invert[0]
+          this.LT_I.y = vec1Invert[1]
+          this.RT_I.x = vec2Invert[0]
+          this.RT_I.y = vec2Invert[1]
+          this.RB_I.x = vec3Invert[0]
+          this.RB_I.y = vec3Invert[1]
+          this.LB_I.x = vec4Invert[0]
+          this.LB_I.y = vec4Invert[1]
           this.ctx.save()
 
           // 绘制4个角
@@ -264,13 +264,13 @@
             canvasHeight: 0,
             ctx: null,
 
-            operateX: 500,
-            operateY: 500,
+            operateX: 500 - 25,
+            operateY: 500 - 25,
             operateRad: 45 * Math.PI / 180,
             operateScaleX: 1,
             operateScaleY: 1,
-            operateOriginX: 0,
-            operateOriginY: 0,
+            operateOriginX: -25,
+            operateOriginY: -25,
 
             ball: null,
           }
@@ -294,7 +294,7 @@
           this.canvasHeight = canvasHeight
 
           this.ctx = canvas.getContext("2d")
-          this.ball = new Ball(this.ctx, { x: this.operateX, y: this.operateY, rad: this.operateRad })
+          this.ball = new Ball(this.ctx, { x: this.operateX, y: this.operateY, rad: this.operateRad, originX: this.operateOriginX, originY: this.operateOriginY })
 
           this.render()
         },

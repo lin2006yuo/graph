@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matrix - Basic</title>
+    <script src="../glMatrix.js"></script>
+    <script src="../size.js"></script>
+    <script src="./vue.mini.js"></script>
+  </head>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+    }
+    #app {
+      padding: 10px;
+    }
+    .operator {
+      margin-left: 20px;
+    }
+    .operator h4 {
+      margin-right: 8px;
+    }
+    .flex {
+      display: flex;
+    }
+    .flex-align-center {
+      align-items: center;
+    }
+    .flex-justify-center {
+      justify-content: center;
+    }
+    .range-slider {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      width: 10rem;
+      height: 0.25rem;
+      outline: none;
+      border-radius: 0.25rem;
+      background-color: #000;
+    }
+    .range-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 1rem;
+      height: 1rem;
+      background-color: #fff;
+      border: 0.25rem solid #000;
+      border-radius: 1rem;
+      cursor: pointer;
+    }
+  </style>
+  <body>
+    <div id="app">
+      <div>
+        <div class="flex">
+          <canvas id="canvas"></canvas>
+          <div class="operator">
+            <div class="flex flex-align-center">
+              <h4>x</h4>
+              <input
+                @input="handleXChange"
+                type="range"
+                min="0"
+                max="100"
+                value="0"
+                :value="operateX / canvasWidth * 100"
+                class="range-slider"
+              />
+            </div>
+            <div class="flex flex-align-center">
+              <h4>y</h4>
+              <input
+                @input="handleYChange"
+                type="range"
+                min="0"
+                max="100"
+                value="0"
+                :value="operateY / canvasWidth * 100"
+                class="range-slider"
+              />
+            </div>
+            <div class="flex flex-align-center">
+              <h4>rad</h4>
+              <input @input="handleRadChange" type="range" min="0" max="100" value="0" class="range-slider" />
+            </div>
+            <!-- <div class="flex flex-align-center">
+              <h4>scaleX</h4>
+              <input
+                @input="handleScaleXChange"
+                type="range"
+                min="0"
+                max="100"
+                :value="(operateScaleX - 1) / 4 * 100"
+                class="range-slider"
+              />
+            </div>
+            <div class="flex flex-align-center">
+              <h4>scaleY</h4>
+              <input
+                @input="handleScaleYChange"
+                type="range"
+                min="0"
+                max="100"
+                :value="(operateScaleY - 1) / 4 * 100"
+                class="range-slider"
+              />
+            </div> -->
+            <div class="flex flex-align-center">
+              <h4>scale</h4>
+              <input
+                @input="handleScaleChange"
+                type="range"
+                min="0"
+                max="100"
+                :value="(operateScale - 1) / 4 * 100"
+                class="range-slider"
+              />
+            </div>
+            <div class="flex flex-align-center">
+              <h4>originX</h4>
+              <input type="number" @input="handleOriginXChange" :value="operateOriginX" />
+            </div>
+            <div class="flex flex-align-center">
+              <h4>originY</h4>
+              <input type="number" @input="handleOriginYChange" :value="operateOriginY" />
+            </div>
+            <div class="flex flex-align-center">
+              <button @click="handleOriginCenter">基于中心旋转</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h4>basic</h4>
+          <!-- <div><span>oper: </span> <span>{{operateXPercent}}</span></div> -->
+          <h4>ball</h4>
+          <div><span>x: </span> <span v-if="ball">{{ball.x}}</span></div>
+          <div><span>y: </span> <span v-if="ball">{{ball.y}}</span></div>
+          <div><span>rad: </span><span v-if="ball">{{ball.rad}} (angle: {{angle}})</span></div>
+          <div><span>scaleX: </span><span v-if="ball">{{ball.scaleX}}</span></div>
+          <div><span>scaleY: </span><span v-if="ball">{{ball.scaleY}}</span></div>
+          <div><span>originX: </span><span v-if="ball">{{ball.originX}}</span></div>
+          <div><span>originY: </span><span v-if="ball">{{ball.originY}}</span></div>
+
+          <div style="display: flex">
+            <div>
+              <div><span>LT: </span><span v-if="ball">x:{{ball.LT.x}} y:{{ball.LT.y}}</span></div>
+              <div><span>RT: </span><span v-if="ball">x:{{ball.RT.x}} y:{{ball.RT.y}}</span></div>
+              <div><span>RB: </span><span v-if="ball">x:{{ball.RB.x}} y:{{ball.RB.y}}</span></div>
+              <div><span>LB: </span><span v-if="ball">x:{{ball.LB.x}} y:{{ball.LB.y}}</span></div>
+            </div>
+
+            <div style="margin-left: 50px">
+              <div><span>LT_I: </span><span v-if="ball">x:{{ball.LT_I.x}} y:{{ball.LT_I.y}}</span></div>
+              <div><span>RT_I: </span><span v-if="ball">x:{{ball.RT_I.x}} y:{{ball.RT_I.y}}</span></div>
+              <div><span>RB_I: </span><span v-if="ball">x:{{ball.RB_I.x}} y:{{ball.RB_I.y}}</span></div>
+              <div><span>LB_I: </span><span v-if="ball">x:{{ball.LB_I.x}} y:{{ball.LB_I.y}}</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      var RectWidth = 200;
+      var RectHeight = 600;
+      class Rect {
+        constructor(ctx, opt) {
+          const {
+            x = 0,
+            y = 0,
+            radius = 10,
+            color = 'red',
+            rad = 0,
+            scaleX = 1,
+            scaleY = 1,
+            scale = 1,
+            originX = 0,
+            originY = 0,
+            width = RectWidth,
+            height = RectHeight,
+          } = opt;
+          this.ctx = ctx;
+          this.radius = radius;
+          this.color = color;
+
+          this.x = x;
+          this.y = y;
+          this.rad = rad;
+          this.scaleX = scaleX;
+          this.scaleY = scaleY;
+          this.scale = scale;
+          this.originX = originX;
+          this.originY = originY;
+          this.width = width;
+          this.height = height;
+
+          this.LT = { x: 0, y: 0 };
+          this.LB = { x: 0, y: 0 };
+          this.RT = { x: 0, y: 0 };
+          this.RB = { x: 0, y: 0 };
+
+          this.LT_I = { x: 0, y: 0 };
+          this.LB_I = { x: 0, y: 0 };
+          this.RT_I = { x: 0, y: 0 };
+          this.RB_I = { x: 0, y: 0 };
+
+          this.matrix = glMatrix.mat2d.create();
+          this.invertMatrix = glMatrix.mat2d.create();
+          this.transform({ x, y, rad, scaleX, scaleY, originX, originY });
+        }
+
+        transform(params) {
+          const {
+            x = this.x,
+            y = this.y,
+            rad = this.rad,
+            scaleX = this.scaleX,
+            scaleY = this.scaleY,
+            scale = this.scale,
+            originX = this.originX,
+            originY = this.originY,
+          } = params;
+          const resultMatrix = glMatrix.mat2d.create();
+
+          // 改变变换原点中心
+          const moveOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [originX, originY]);
+
+          // 平移矩阵
+          const translateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [x, y]);
+
+          // 旋转矩阵
+          const rotateMatrix = glMatrix.mat2d.rotate([], glMatrix.mat2d.create(), rad);
+
+          // 缩放矩阵
+          const scaleMatrix = glMatrix.mat2d.scale([], glMatrix.mat2d.create(), [scale || scaleX, scale || scaleY]);
+
+          // 计算最终矩阵
+          // glMatrix.mat2d.multiply(resultMatrix, rotateMatrix, translateMatrix) // 先旋转再平移
+          glMatrix.mat2d.multiply(resultMatrix, translateMatrix, rotateMatrix); // 先平移再旋转
+          glMatrix.mat2d.multiply(resultMatrix, resultMatrix, scaleMatrix);
+          glMatrix.mat2d.multiply(resultMatrix, resultMatrix, moveOriginMatrix);
+          const resultInvertMatrix = glMatrix.mat2d.create();
+          glMatrix.mat2d.invert(resultInvertMatrix, resultMatrix);
+
+          this.x = x;
+          this.y = y;
+          this.rad = rad;
+          this.scaleX = scaleX;
+          this.scaleY = scaleY;
+          this.scale = scale;
+          this.originX = originX;
+          this.originY = originY;
+          this.matrix = resultMatrix;
+          this.invertMatrix = resultInvertMatrix;
+        }
+
+        draw() {
+          // 画一个矩形
+          const vec1 = glMatrix.vec2.transformMat2d([], [0, 0], this.matrix);
+          const vec2 = glMatrix.vec2.transformMat2d([], [this.width, 0], this.matrix);
+          const vec3 = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.matrix);
+          const vec4 = glMatrix.vec2.transformMat2d([], [0, this.height], this.matrix);
+          const vec_origin = glMatrix.vec2.transformMat2d([], [-this.originX, -this.originY], this.matrix);
+
+          const vec1Invert = glMatrix.vec2.transformMat2d([], [0, 0], this.invertMatrix);
+          const vec2Invert = glMatrix.vec2.transformMat2d([], [this.width, 0], this.invertMatrix);
+          const vec3Invert = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.invertMatrix);
+          const vec4Invert = glMatrix.vec2.transformMat2d([], [0, this.height], this.invertMatrix);
+
+          this.LT_I.x = vec1Invert[0];
+          this.LT_I.y = vec1Invert[1];
+          this.RT_I.x = vec2Invert[0];
+          this.RT_I.y = vec2Invert[1];
+          this.RB_I.x = vec3Invert[0];
+          this.RB_I.y = vec3Invert[1];
+          this.LB_I.x = vec4Invert[0];
+          this.LB_I.y = vec4Invert[1];
+          this.ctx.save();
+
+          // 绘制4个角
+          this.ctx.fillStyle = this.color;
+          this.ctx.beginPath();
+          this.LT.x = vec1[0] - this.originX;
+          this.LT.y = vec1[1] - this.originY;
+          this.ctx.arc(this.LT.x, this.LT.y, this.radius, 0, 2 * Math.PI);
+          this.ctx.fill();
+          this.ctx.closePath();
+
+          this.ctx.beginPath();
+          this.RT.x = vec2[0] - this.originX;
+          this.RT.y = vec2[1] - this.originY;
+          this.ctx.arc(this.RT.x, this.RT.y, this.radius, 0, 2 * Math.PI);
+          this.ctx.fill();
+          this.ctx.closePath();
+
+          this.ctx.beginPath();
+
+          this.RB.x = vec3[0] - this.originX;
+          this.RB.y = vec3[1] - this.originY;
+          this.ctx.arc(this.RB.x, this.RB.y, this.radius, 0, 2 * Math.PI);
+          this.ctx.fill();
+          this.ctx.closePath();
+
+          this.ctx.beginPath();
+          this.LB.x = vec4[0] - this.originX;
+          this.LB.y = vec4[1] - this.originY;
+          this.ctx.arc(this.LB.x, this.LB.y, this.radius, 0, 2 * Math.PI);
+          this.ctx.fill();
+          this.ctx.closePath();
+
+          // 绘制原点
+          this.ctx.beginPath();
+          this.ctx.fillStyle = 'black';
+          this.ctx.arc(vec_origin[0] - this.originX, vec_origin[1] - this.originY, 5, 0, 2 * Math.PI);
+          this.ctx.fill();
+          this.ctx.closePath();
+
+          // 绘制矩形
+          this.ctx.beginPath();
+          this.ctx.moveTo(this.LT.x, this.LT.y);
+          this.ctx.lineTo(this.RT.x, this.RT.y);
+          this.ctx.lineTo(this.RB.x, this.RB.y);
+          this.ctx.lineTo(this.LB.x, this.LB.y);
+          this.ctx.closePath();
+
+          this.ctx.restore();
+        }
+      }
+
+      let vm = new Vue({
+        el: '#app',
+        data() {
+          return {
+            canvas: null,
+            canvasWidth: 0,
+            canvasHeight: 0,
+            ctx: null,
+
+            operateX: 500 - RectWidth / 2,
+            operateY: 500 - RectHeight / 2,
+            operateRad: (0 * Math.PI) / 180,
+            operateScaleX: 1,
+            operateScaleY: 1,
+            operateScale: 1,
+            operateOriginX: -RectWidth / 2,
+            operateOriginY: -RectHeight / 2,
+
+            ball: null,
+          };
+        },
+        computed: {
+          angle() {
+            return (360 * this.ball.rad) / (2 * Math.PI);
+          },
+        },
+        mounted() {
+          const {
+            canvas,
+            width: canvasWidth,
+            height: canvasHeight,
+          } = new KSize('canvas', {
+            width: 500,
+            height: 500,
+          });
+          this.canvas = canvas;
+          this.canvasWidth = canvasWidth;
+          this.canvasHeight = canvasHeight;
+
+          this.ctx = canvas.getContext('2d');
+          this.ball = new Rect(this.ctx, {
+            x: this.operateX,
+            y: this.operateY,
+            rad: this.operateRad,
+            originX: this.operateOriginX,
+            originY: this.operateOriginY,
+          });
+
+          this.render();
+        },
+        methods: {
+          render() {
+            this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+            this.ball.draw();
+            this.drawLine();
+            this.drawRectLine();
+            this.drawCrop();
+            requestAnimationFrame(this.render);
+          },
+
+          // 画Rect对角线
+          drawRectLine() {
+            this.ctx.save();
+            this.ctx.strokeColor = '#000';
+            this.ctx.moveTo(this.ball.LT.x, this.ball.LT.y);
+            this.ctx.lineTo(this.ball.RB.x, this.ball.RB.y);
+
+            this.ctx.moveTo(this.ball.RT.x, this.ball.RT.y);
+            this.ctx.lineTo(this.ball.LB.x, this.ball.LB.y);
+
+            this.ctx.stroke();
+
+            this.ctx.restore();
+          },
+
+          // 画对角线
+          drawLine() {
+            this.ctx.save();
+
+            this.ctx.strokeColor = '#000';
+            this.ctx.moveTo(0, 0);
+            this.ctx.lineTo(1000, 1000);
+
+            this.ctx.moveTo(1000, 0);
+            this.ctx.lineTo(0, 1000);
+
+            this.ctx.stroke();
+
+            this.ctx.restore();
+          },
+
+          // 裁剪框
+          drawCrop() {
+            this.ctx.save();
+
+            this.ctx.strokeColor = '#000';
+            this.ctx.moveTo(400, 400);
+            this.ctx.lineTo(600, 400);
+            this.ctx.lineTo(600, 600);
+            this.ctx.lineTo(400, 600);
+            this.ctx.closePath();
+            this.ctx.stroke();
+
+            this.ctx.restore();
+          },
+
+          handleXChange(e) {
+            const percent = e.currentTarget.value / 100;
+            this.operateX = this.canvasWidth * percent;
+
+            this.ball.transform({ x: this.operateX });
+          },
+          handleYChange(e) {
+            const percent = e.currentTarget.value / 100;
+            this.operateY = this.canvasWidth * percent;
+
+            this.ball.transform({ y: this.operateY });
+          },
+          handleRadChange(e) {
+            const percent = e.currentTarget.value / 100;
+            this.operateRad = 2 * Math.PI * percent;
+
+            this.ball.transform({ rad: this.operateRad });
+          },
+          handleScaleChange(e) {
+            const percent = e.currentTarget.value / 100;
+            this.operateScale = percent * 4 + 1; // 1 ~ 5
+
+            this.ball.transform({ scale: this.operateScale });
+          },
+          handleScaleXChange(e) {
+            const percent = e.currentTarget.value / 100;
+            this.operateScaleX = percent * 4 + 1; // 1 ~ 5
+
+            this.ball.transform({ scaleX: this.operateScaleX });
+          },
+          handleScaleYChange(e) {
+            const percent = e.currentTarget.value / 100;
+            this.operateScaleY = percent * 4 + 1; // 1 ~ 5
+
+            this.ball.transform({ scaleY: this.operateScaleY });
+          },
+          handleOriginXChange(e) {
+            const v = Number(e.currentTarget.value);
+            this.operateOriginX = v;
+            this.ball.transform({ originX: v });
+          },
+          handleOriginYChange(e) {
+            const v = Number(e.currentTarget.value);
+            this.operateOriginY = v;
+            this.ball.transform({ originY: v });
+          },
+          handleOriginCenter() {
+            this.operateOriginX = -RectWidth / 2;
+            this.operateOriginY = -RectHeight / 2;
+            this.ball.transform({ originX: this.operateOriginX, originY: this.operateOriginY });
+          },
+        },
+      });
+    </script>
+  </body>
+</html>
