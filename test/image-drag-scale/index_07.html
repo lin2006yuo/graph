@@ -16,6 +16,7 @@
       padding: 0;
       width: 100vw;
       height: 100vh;
+      padding: 30px;
       overflow: hidden;
     }
     #app {
@@ -111,7 +112,7 @@
 
     <script>
       let vm = new Vue({
-        el: "#app",
+        el: '#app',
         data() {
           return {
             canvas: null,
@@ -154,225 +155,318 @@
             backgroundMouse: { x: 0, y: 0 },
             backgroundLastMouse: { x: 0, y: 0 },
             isMousedown: false,
-          }
+          };
         },
         computed: {
           backgroundCropperInnerRect() {
-            return {}
+            return {};
           },
           backgroundMouse2() {
             // const result = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundScaleMatrix)
             // glMatrix.mat2d.multiply(result, result, this.backgroundTranslateMatrix)
 
-            const invert = glMatrix.mat2d.invert([], this.backgroundResultMatrix)
-            const vec2_point = glMatrix.vec2.transformMat2d([], [this.mouse.x, this.mouse.y], invert)
-            return { x: vec2_point[0], y: vec2_point[1] }
+            const invert = glMatrix.mat2d.invert([], this.backgroundResultMatrix);
+            const vec2_point = glMatrix.vec2.transformMat2d([], [this.mouse.x, this.mouse.y], invert);
+            return { x: vec2_point[0], y: vec2_point[1] };
           },
           backgroundCropperInnerRect() {
             // const result = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundScaleMatrix)
             // glMatrix.mat2d.multiply(result, result, this.backgroundTranslateMatrix)
 
-            const invert = glMatrix.mat2d.invert([], this.backgroundResultMatrix)
+            const invert = glMatrix.mat2d.invert([], this.backgroundResultMatrix);
 
             const aa = invert[0],
               ab = invert[1],
               ac = invert[2],
-              ad = invert[3]
-            const det = aa * ad - ab * ac
+              ad = invert[3];
+            const det = aa * ad - ab * ac;
 
             // console.log(det)
 
-            const { leftUpper, rightUpper, rightLower, leftLower } = this.cropperInnerRect
+            const { leftUpper, rightUpper, rightLower, leftLower } = this.cropperInnerRect;
 
-            const vec2_leftUpper = glMatrix.vec2.transformMat2d([], [leftUpper.x, leftUpper.y], invert)
-            const vec2_rightUpper = glMatrix.vec2.transformMat2d([], [rightUpper.x, rightUpper.y], invert)
-            const vec2_rightLower = glMatrix.vec2.transformMat2d([], [rightLower.x, rightLower.y], invert)
-            const vec2_leftLower = glMatrix.vec2.transformMat2d([], [leftLower.x, leftLower.y], invert)
+            const vec2_leftUpper = glMatrix.vec2.transformMat2d([], [leftUpper.x, leftUpper.y], invert);
+            const vec2_rightUpper = glMatrix.vec2.transformMat2d([], [rightUpper.x, rightUpper.y], invert);
+            const vec2_rightLower = glMatrix.vec2.transformMat2d([], [rightLower.x, rightLower.y], invert);
+            const vec2_leftLower = glMatrix.vec2.transformMat2d([], [leftLower.x, leftLower.y], invert);
 
             return {
               leftUpper: { x: +vec2_leftUpper[0].toFixed(2), y: +vec2_leftUpper[1].toFixed(2) },
               rightUpper: { x: +vec2_rightUpper[0].toFixed(2), y: +vec2_rightUpper[1].toFixed(2) },
               rightLower: { x: +vec2_rightLower[0].toFixed(2), y: +vec2_rightLower[1].toFixed(2) },
               leftLower: { x: +vec2_leftLower[0].toFixed(2), y: +vec2_leftLower[1].toFixed(2) },
-            }
+            };
           },
           backgroundCrop() {
-            const width = this.backgroundCropperInnerRect.rightUpper.x - this.backgroundCropperInnerRect.leftUpper.x
-            const height = this.backgroundCropperInnerRect.leftLower.y - this.backgroundCropperInnerRect.leftUpper.y
-            return { width, height }
+            const width = this.backgroundCropperInnerRect.rightUpper.x - this.backgroundCropperInnerRect.leftUpper.x;
+            const height = this.backgroundCropperInnerRect.leftLower.y - this.backgroundCropperInnerRect.leftUpper.y;
+            return { width, height };
           },
           backgroundCropMax() {
-            const cropRatio = this.cropWidth / this.cropHeight
-            const imgRatio = this.img.naturalWidth / this.img.naturalHeight
+            const cropRatio = this.cropWidth / this.cropHeight;
+            const imgRatio = this.img.naturalWidth / this.img.naturalHeight;
             if (cropRatio > imgRatio) {
               if (this.rad === Math.PI / 2) {
                 return {
                   width: (this.img.naturalWidth * cropRatio) / this.scale,
                   height: this.img.naturalWidth,
-                }
+                };
               } else {
                 return {
                   width: this.img.naturalWidth,
                   height: this.img.naturalWidth / cropRatio / this.scale,
-                }
+                };
               }
             } else {
               if (this.rad === Math.PI / 2) {
                 return {
                   width: this.img.naturalHeight,
                   height: this.img.naturalHeight / cropRatio / this.scale,
-                }
+                };
               } else {
                 return {
                   width: (this.img.naturalHeight * cropRatio) / this.scale,
                   height: this.img.naturalHeight,
-                }
+                };
               }
             }
           },
           backgroundMatrix() {
-            const resultMatrix = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundScaleMatrix)
-            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, this.backgroundTranslateMatrix)
-            return resultMatrix
+            const resultMatrix = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundScaleMatrix);
+            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, this.backgroundTranslateMatrix);
+            return resultMatrix;
           },
         },
         mounted() {
-          const ksize = new KSize("canvas")
-          const { canvas, width: canvasWidth, height: canvasHeight } = ksize
-          this.canvas = canvas
-          this.canvasWidth = canvasWidth
-          this.canvasHeight = canvasHeight
-          this.ksize = ksize
+          const ksize = new KSize('canvas');
+          const { canvas, width: canvasWidth, height: canvasHeight } = ksize;
+          this.canvas = canvas;
+          this.canvasWidth = canvasWidth;
+          this.canvasHeight = canvasHeight;
+          this.ksize = ksize;
 
-          this.ctx = canvas.getContext("2d")
+          this.ctx = canvas.getContext('2d');
 
-          window.addEventListener("resize", this.resize)
-          window.addEventListener("mousemove", this.handleMouseMove)
-          this.canvas.addEventListener("mousedown", this.handleMousedown)
-          window.addEventListener("mouseup", this.handleMouseup)
-          this.canvas.addEventListener("mousewheel", this.handleMouseWheel)
+          window.addEventListener('resize', this.resize);
+          window.addEventListener('mousemove', this.handleMouseMove);
+          this.canvas.addEventListener('mousedown', this.handleMousedown);
+          window.addEventListener('mouseup', this.handleMouseup);
+          this.canvas.addEventListener('mousewheel', this.handleMouseWheel);
 
-          this.loadImage()
-          this.render()
+          this.loadImage();
+          this.render();
 
-          __vue = this
+          __vue = this;
         },
         methods: {
           loadImage() {
-            const img = new Image()
-            img.src = "./03.jpg"
+            const img = new Image();
+            img.src = './03.jpg';
             img.onload = () => {
-              this.img = img
-              this.boundary.right = img.naturalWidth
-              this.boundary.bottom = img.naturalHeight
-            }
+              this.img = img;
+              this.boundary.right = img.naturalWidth;
+              this.boundary.bottom = img.naturalHeight;
+            };
           },
           // 绘制裁剪框
           drawCropFrame() {
-            let width = this.canvasWidth * 0.8
-            let height = this.canvasHeight * 0.8
-            const canvasRatio = width / height
+            let width = this.canvasWidth * 1.0;
+            let height = this.canvasHeight * 1.0;
+            const canvasRatio = width / height;
             // 裁剪框比例
-            const ratio = 16 / 9
+            const ratio = 16 / 9;
             if (ratio > canvasRatio) {
-              height = width / ratio
+              height = width / ratio;
             } else {
-              width = height * ratio
+              width = height * ratio;
             }
 
-            const { ctx } = this
-            ctx.save()
-            ctx.fillStyle = "rgba(0,0,0,0.5)"
+            const { ctx } = this;
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
             // ctx.lineWidth = 10
 
-            const resultMatrix = this.translateToCenter(width, height)
+            const resultMatrix = this.translateToCenter(width, height);
             const cropperInnerRect = {
               leftUpper: { x: 0, y: 0 },
               rightUpper: { x: width, y: 0 },
               rightLower: { x: width, y: height },
               leftLower: { x: 0, y: height },
-            }
-            const { leftLower, rightLower, leftUpper, rightUpper } = cropperInnerRect
-            const vec2_p0 = glMatrix.vec2.transformMat2d([], [leftUpper.x, leftUpper.y], resultMatrix)
-            leftUpper.x = vec2_p0[0]
-            leftUpper.y = vec2_p0[1]
-            const vec2_p1 = glMatrix.vec2.transformMat2d([], [rightUpper.x, rightUpper.y], resultMatrix)
-            rightUpper.x = vec2_p1[0]
-            rightUpper.y = vec2_p1[1]
-            const vec2_p2 = glMatrix.vec2.transformMat2d([], [rightLower.x, rightLower.y], resultMatrix)
-            rightLower.x = vec2_p2[0]
-            rightLower.y = vec2_p2[1]
-            const vec2_p3 = glMatrix.vec2.transformMat2d([], [leftLower.x, leftLower.y], resultMatrix)
-            leftLower.x = vec2_p3[0]
-            leftLower.y = vec2_p3[1]
-            this.cropperInnerRect = cropperInnerRect
+            };
+            const { leftLower, rightLower, leftUpper, rightUpper } = cropperInnerRect;
+            const vec2_p0 = glMatrix.vec2.transformMat2d([], [leftUpper.x, leftUpper.y], resultMatrix);
+            leftUpper.x = vec2_p0[0];
+            leftUpper.y = vec2_p0[1];
+            const vec2_p1 = glMatrix.vec2.transformMat2d([], [rightUpper.x, rightUpper.y], resultMatrix);
+            rightUpper.x = vec2_p1[0];
+            rightUpper.y = vec2_p1[1];
+            const vec2_p2 = glMatrix.vec2.transformMat2d([], [rightLower.x, rightLower.y], resultMatrix);
+            rightLower.x = vec2_p2[0];
+            rightLower.y = vec2_p2[1];
+            const vec2_p3 = glMatrix.vec2.transformMat2d([], [leftLower.x, leftLower.y], resultMatrix);
+            leftLower.x = vec2_p3[0];
+            leftLower.y = vec2_p3[1];
+            this.cropperInnerRect = cropperInnerRect;
 
-            ctx.beginPath()
+            ctx.beginPath();
 
-            ctx.moveTo(0, 0)
-            ctx.lineTo(this.canvasWidth, 0)
-            ctx.lineTo(this.canvasWidth, this.canvasHeight)
-            ctx.lineTo(0, this.canvasHeight)
-            ctx.lineTo(0, 0)
-            ctx.closePath()
+            ctx.moveTo(0, 0);
+            ctx.lineTo(this.canvasWidth, 0);
+            ctx.lineTo(this.canvasWidth, this.canvasHeight);
+            ctx.lineTo(0, this.canvasHeight);
+            ctx.lineTo(0, 0);
+            ctx.closePath();
 
-            ctx.moveTo(leftUpper.x, leftUpper.y)
-            ctx.lineTo(leftLower.x, leftLower.y)
-            ctx.lineTo(rightLower.x, rightLower.y)
-            ctx.lineTo(rightUpper.x, rightUpper.y)
-            ctx.lineTo(leftUpper.x, leftUpper.y)
-            ctx.closePath()
+            ctx.moveTo(leftUpper.x, leftUpper.y);
+            ctx.lineTo(leftLower.x, leftLower.y);
+            ctx.lineTo(rightLower.x, rightLower.y);
+            ctx.lineTo(rightUpper.x, rightUpper.y);
+            ctx.lineTo(leftUpper.x, leftUpper.y);
+            ctx.closePath();
 
-            ctx.fill()
-            ctx.stroke()
+            ctx.fill();
 
-            ctx.restore()
+            ctx.beginPath();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 4;
+
+            //
+            //    x0    x1        x2      x3
+            // y0 +------------------------+
+            //    |      |         |       |
+            //    |      |         |       |
+            // y1 +------+---------+-------+
+            //    |      |         |       |
+            //    |      |         |       |
+            //    |      |         |       |
+            // y2 +------+---------+-------+
+            //    |      |         |       |
+            //    |      |         |       |
+            // y3 +------------------------+
+            //
+            const cropWidth = this.cropWidth;
+            const cropHeight = this.cropHeight;
+            const x0 = leftUpper.x;
+            const x1 = leftUpper.x + cropWidth / 3;
+            const x2 = leftUpper.x + (2 / 3) * cropWidth;
+            const x3 = leftUpper.x + cropWidth;
+
+            const y0 = leftUpper.y;
+            const y1 = leftUpper.y + cropHeight / 3;
+            const y2 = leftUpper.y + (2 / 3) * cropHeight;
+            const y3 = leftUpper.y + cropHeight;
+
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x0, y3);
+            ctx.lineTo(x3, y3);
+            ctx.lineTo(x3, y0);
+            ctx.closePath();
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            ctx.moveTo(x0, y1);
+            ctx.lineTo(x3, y1);
+            ctx.moveTo(x0, y2);
+            ctx.lineTo(x3, y2);
+
+            ctx.moveTo(x1, y0);
+            ctx.lineTo(x1, y3);
+            ctx.moveTo(x2, y0);
+            ctx.lineTo(x2, y3);
+            ctx.stroke();
+            ctx.closePath();
+
+            ctx.save();
+
+            const copy = new Path2D();
+            ctx.shadowColor = 'rgba(0,0,0,0.4)';
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = 'white';
+
+            // 左上
+            copy.addPath(
+              new Path2D(
+                'M7,7 L7,24 C7,25.933 5.433,27.5 3.5,27.5 V27.5 C1.5670000000000002,27.5 0,25.933 0,24 L0,3.5 C0,1.5670000000000002 0.000020000000000131024,0 0.000020000000000131024,0 L24,0 C25.933,0 27.5,1.5670000000000002 27.5,3.5 V3.5 C27.5,5.433 25.933,7 24,7 L7,7 z'
+              ),
+              { a: 1.2, d: 1.2, e: x0, f: y0 }
+            );
+            // 右上
+            copy.addPath(
+              new Path2D(
+                'M20.5,7 H3.5 C1.5670000000000002,7 0,5.433 0,3.5 C0,1.5670000000000002 1.5670000000000002,0 3.5,0 H27.5 C27.5,0 27.5,1.5670000000000002 27.5,3.5 V24 C27.5,25.933 25.933,27.5 24,27.5 C22.067,27.5 20.5,25.933 20.5,24 V7 z'
+              ),
+              { a: 1.2, d: 1.2, e: x3 - 33, f: y0 }
+            );
+            // 左下
+            copy.addPath(
+              new Path2D(
+                'M7,20.5 L24,20.5 C25.933,20.5 27.5,22.067 27.5,24 C27.5,25.933 25.933,27.5 24,27.5 L3.5,27.5 C1.5670000000000002,27.5 0,27.4993 0,27.4993 L0,3.5 C0,1.5670000000000002 1.5670000000000002,0 3.5,0 C5.433,0 7,1.5670000000000002 7,3.5 L7,20.5 z'
+              ),
+              { a: 1.2, d: 1.2, e: x0, f: y3 - 33 }
+            );
+            // 右下
+            copy.addPath(
+              new Path2D(
+                'M20.5,20.5 L20.5,3.5 C20.5,1.5670000000000002 22.067,0 24,0 C25.933,0 27.5,1.5670000000000002 27.5,3.5 L27.5,27.5 C27.5,27.5 25.933,27.5 24,27.5 L3.5,27.5 C1.5670000000000002,27.5 0,25.933 0,24 C0,22.067 1.5670000000000002,20.5 3.5,20.5 L20.5,20.5 z'
+              ),
+              { a: 1.2, d: 1.2, e: x3 - 33, f: y3 - 33 }
+            );
+
+            ctx.fill(copy);
+            ctx.restore();
 
             // 记录数据
-            this.cropWidth = width
-            this.cropHeight = height
+            this.cropWidth = width;
+            this.cropHeight = height;
           },
           // 绘制图片
           calcImage() {
             if (!this.img) {
-              throw Error("no img")
+              throw Error('no img');
             }
-            const { ctx } = this
-            ctx.save()
+            const { ctx } = this;
+            ctx.save();
 
-            const resultMatrix = glMatrix.mat2d.create()
-            const centerOriginMatrix = glMatrix.mat2d.fromTranslation([], [-this.img.naturalWidth / 2, -this.img.naturalHeight / 2])
-            const translateMatrix = glMatrix.mat2d.fromTranslation([], [this.canvasWidth / 2, this.canvasHeight / 2])
+            const resultMatrix = glMatrix.mat2d.create();
+            const centerOriginMatrix = glMatrix.mat2d.fromTranslation(
+              [],
+              [-this.img.naturalWidth / 2, -this.img.naturalHeight / 2]
+            );
+            const translateMatrix = glMatrix.mat2d.fromTranslation([], [this.canvasWidth / 2, this.canvasHeight / 2]);
 
-            const cropRatio = this.cropWidth / this.cropHeight
-            const backgroundRatio = this.rad === Math.PI / 2 ? this.img.naturalHeight / this.img.naturalWidth : this.img.naturalWidth / this.img.naturalHeight
+            const cropRatio = this.cropWidth / this.cropHeight;
+            const backgroundRatio =
+              this.rad === Math.PI / 2
+                ? this.img.naturalHeight / this.img.naturalWidth
+                : this.img.naturalWidth / this.img.naturalHeight;
 
             // 1. object-fit: cover
-            let coverScale = 0
+            let coverScale = 0;
             if (cropRatio > backgroundRatio) {
               if (this.rad === Math.PI / 2) {
-                coverScale = this.cropWidth / this.img.naturalHeight
+                coverScale = this.cropWidth / this.img.naturalHeight;
               } else {
-                coverScale = this.cropWidth / this.img.naturalWidth
+                coverScale = this.cropWidth / this.img.naturalWidth;
               }
             } else {
               if (this.rad === Math.PI / 2) {
-                coverScale = this.cropHeight / this.img.naturalWidth
+                coverScale = this.cropHeight / this.img.naturalWidth;
               } else {
-                coverScale = this.cropHeight / this.img.naturalHeight
+                coverScale = this.cropHeight / this.img.naturalHeight;
               }
             }
-            this.coverScale = coverScale
+            this.coverScale = coverScale;
 
-            const scaleMatrix = glMatrix.mat2d.fromScaling([], [coverScale, coverScale])
-            const rotateMatrix = glMatrix.mat2d.fromRotation([], this.rad)
-            glMatrix.mat2d.multiply(resultMatrix, translateMatrix, scaleMatrix)
-            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, rotateMatrix)
-            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, centerOriginMatrix)
+            const scaleMatrix = glMatrix.mat2d.fromScaling([], [coverScale, coverScale]);
+            const rotateMatrix = glMatrix.mat2d.fromRotation([], this.rad);
+            glMatrix.mat2d.multiply(resultMatrix, translateMatrix, scaleMatrix);
+            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, rotateMatrix);
+            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, centerOriginMatrix);
 
-            this.backgroundResizeMatrix = resultMatrix
+            this.backgroundResizeMatrix = resultMatrix;
 
-            this.updateCropperInnerRectCenter()
+            this.updateCropperInnerRectCenter();
           },
 
           /**
@@ -382,66 +476,70 @@
            *
            * */
           translateToCenter(width, height) {
-            const resultMatrix = glMatrix.mat2d.create()
+            const resultMatrix = glMatrix.mat2d.create();
             // 矩形中心作为原点
-            const moveOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [-width / 2, -height / 2])
+            const moveOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [-width / 2, -height / 2]);
             // 平移到canvas中心
-            const translateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [this.canvasWidth / 2, this.canvasHeight / 2])
-            glMatrix.mat2d.multiply(resultMatrix, translateMatrix, moveOriginMatrix)
-            return resultMatrix
+            const translateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [
+              this.canvasWidth / 2,
+              this.canvasHeight / 2,
+            ]);
+            glMatrix.mat2d.multiply(resultMatrix, translateMatrix, moveOriginMatrix);
+            return resultMatrix;
           },
           handleRadChange(e) {
-            const percent = e.currentTarget.value / 100
-            // this.rad = 2 * Math.PI * percent
-            this.rad = (90 * Math.PI) / 180
-
-            // const center = {
-            //   x: this.cropperInnerRectCenter.x,
-            //   y: this.cropperInnerRectCenter.y,
-            //   // x: (this.canvas.width / 2 - this.backgroundResizeMatrix[4]) / this.scale / this.coverScale,
-            //   // y: (this.canvas.height / 2 - this.backgroundResizeMatrix[5]) / this.scale / this.coverScale,
-            // }
+            const percent = e.currentTarget.value / 100;
+            this.rad = 2 * Math.PI * percent;
+            // this.rad = (90 * Math.PI) / 180
 
             // TODO: 根据裁剪中心旋转，考虑边界情况
+            // const center = {
+            //   // x: this.cropperInnerRectCenter.x,
+            //   // y: this.cropperInnerRectCenter.y,
+            //   x: (this.canvas.width / 2 - this.backgroundResizeMatrix[4]) / this.scale / this.coverScale,
+            //   y: (this.canvas.height / 2 - this.backgroundResizeMatrix[5]) / this.scale / this.coverScale,
+            // }
             // const t = glMatrix.mat2d.fromTranslation([], [center.x, center.y])
             // glMatrix.mat2d.multiply(this.backgroundRotateMatrix, t, r)
             // glMatrix.mat2d.multiply(this.backgroundRotateMatrix, this.backgroundRotateMatrix, glMatrix.mat2d.fromTranslation([], [-center.x, -center.y]))
 
+            // #1
             // 临时解决方案，旋转后，重置所有变换
-            const t = glMatrix.mat2d.fromTranslation(this.backgroundTranslateMatrix, [0, 0])
-            this.offset = { x: 0, y: 0 }
-            // const scale = this.backgroundCropMax.width / this.img.naturalHeight
-            this.backgroundScaleMatrix = this.fromCenter("scale", [1, 1])
-            this.scale = 1
-            // // console.log(this.backgroundScaleMatrix)
-            // this.offset = { x: this.backgroundScaleMatrix[4], y: this.backgroundScaleMatrix[5] }
-            // this.scale = this.backgroundScaleMatrix[0]
+            // const t = glMatrix.mat2d.fromTranslation(this.backgroundTranslateMatrix, [0, 0]);
+            // this.offset = { x: 0, y: 0 };
+            // // const scale = this.backgroundCropMax.width / this.img.naturalHeight
+            // this.backgroundScaleMatrix = this.fromCenter('scale', [1, 1]);
+            // this.scale = 1;
+            // // // console.log(this.backgroundScaleMatrix)
+            // // this.offset = { x: this.backgroundScaleMatrix[4], y: this.backgroundScaleMatrix[5] }
+            // // this.scale = this.backgroundScaleMatrix[0]
+            // // this.backgroundRotateMatrix = this.fromCenter("rotate", this.rad)
 
-            // this.backgroundRotateMatrix = this.fromCenter("rotate", this.rad)
-            this.calcImage()
+            // #2
+            this.calcImage();
           },
           fromCenter(t, value) {
-            const res = glMatrix.mat2d.create()
-            if (t === "rotate") {
-              const center = glMatrix.mat2d.fromTranslation([], [this.img.naturalWidth / 2, this.img.naturalHeight / 2])
-              const _center = glMatrix.mat2d.fromTranslation([], [-this.img.naturalWidth / 2, -this.img.naturalHeight / 2])
-              const r = glMatrix.mat2d.fromRotation([], value)
-              glMatrix.mat2d.multiply(r, center, r)
-              glMatrix.mat2d.multiply(res, r, _center)
-            } else if (t === "scale") {
-              const center = glMatrix.mat2d.fromTranslation([], [this.img.naturalWidth / 2, this.img.naturalHeight / 2])
-              const _center = glMatrix.mat2d.fromTranslation([], [-this.img.naturalWidth / 2, -this.img.naturalHeight / 2])
-              const s = glMatrix.mat2d.fromScaling([], value)
-              glMatrix.mat2d.multiply(s, center, s)
-              glMatrix.mat2d.multiply(res, s, _center)
+            const res = glMatrix.mat2d.create();
+            if (t === 'rotate') {
+              const center = glMatrix.mat2d.fromTranslation([], [this.img.naturalWidth / 2, this.img.naturalHeight / 2]);
+              const _center = glMatrix.mat2d.fromTranslation([], [-this.img.naturalWidth / 2, -this.img.naturalHeight / 2]);
+              const r = glMatrix.mat2d.fromRotation([], value);
+              glMatrix.mat2d.multiply(r, center, r);
+              glMatrix.mat2d.multiply(res, r, _center);
+            } else if (t === 'scale') {
+              const center = glMatrix.mat2d.fromTranslation([], [this.img.naturalWidth / 2, this.img.naturalHeight / 2]);
+              const _center = glMatrix.mat2d.fromTranslation([], [-this.img.naturalWidth / 2, -this.img.naturalHeight / 2]);
+              const s = glMatrix.mat2d.fromScaling([], value);
+              glMatrix.mat2d.multiply(s, center, s);
+              glMatrix.mat2d.multiply(res, s, _center);
             }
 
-            return res
+            return res;
           },
           handleMousedown(e) {
-            this.backgroundLastMouse.x = this.mouse.x
-            this.backgroundLastMouse.y = this.mouse.y
-            this.isMousedown = true
+            this.backgroundLastMouse.x = this.mouse.x;
+            this.backgroundLastMouse.y = this.mouse.y;
+            this.isMousedown = true;
 
             this.limit = {
               left: this.backgroundCropperInnerRect.leftUpper.x + this.backgroundTranslateMatrix[4],
@@ -451,140 +549,156 @@
               top: this.backgroundCropperInnerRect.leftUpper.y + this.backgroundTranslateMatrix[5],
 
               bottom: this.backgroundCropperInnerRect.leftLower.y - this.boundary.bottom + this.backgroundTranslateMatrix[5],
-            }
+            };
           },
           handleMouseup() {
-            this.isMousedown = false
-            this.updateCropperInnerRectCenter()
+            this.isMousedown = false;
+            this.updateCropperInnerRectCenter();
           },
           handleMouseMove(e) {
-            this.mouse.x = (e.pageX - this.canvas.offsetLeft) * 2
-            this.mouse.y = (e.pageY - this.canvas.offsetTop) * 2
+            this.mouse.x = (e.pageX - this.canvas.offsetLeft) * 2; // 2 is canvas hidpi ratio
+            this.mouse.y = (e.pageY - this.canvas.offsetTop) * 2;
+            console.log(this.mouse.x, this.mouse.y);
 
             if (this.isMousedown) {
-              const invert_matrix = glMatrix.mat2d.invert([], this.backgroundResultMatrix)
+              const invert_matrix = glMatrix.mat2d.invert([], this.backgroundResultMatrix);
               if (!invert_matrix) {
-                return null
+                return null;
               }
 
-              const vec2_p1 = glMatrix.vec2.transformMat2d([], [this.mouse.x, this.mouse.y], invert_matrix) // currentOffset Last
-              const vec2_p2 = glMatrix.vec2.transformMat2d([], [this.backgroundLastMouse.x, this.backgroundLastMouse.y], invert_matrix)
+              const vec2_p1 = glMatrix.vec2.transformMat2d([], [this.mouse.x, this.mouse.y], invert_matrix); // currentOffset Last
+              const vec2_p2 = glMatrix.vec2.transformMat2d(
+                [],
+                [this.backgroundLastMouse.x, this.backgroundLastMouse.y],
+                invert_matrix
+              );
+              // const delta = { x: this.mouse.x - this.backgroundLastMouse.x, y: this.mouse.y - this.backgroundLastMouse.y };
 
-              const delta = { x: vec2_p1[0] - vec2_p2[0], y: vec2_p1[1] - vec2_p2[1] }
-              this.offset.x += delta.x * this.scale
-              this.offset.y += delta.y * this.scale
+              const delta = { x: vec2_p1[0] - vec2_p2[0], y: vec2_p1[1] - vec2_p2[1] };
+              this.offset.x += delta.x * this.scale;
+              this.offset.y += delta.y * this.scale;
 
-              this.offset = this.fixOffset(this.offset)
+              this.offset = this.fixOffset(this.offset);
 
-              this.backgroundLastMouse.x = this.mouse.x
-              this.backgroundLastMouse.y = this.mouse.y
+              this.backgroundLastMouse.x = this.mouse.x;
+              this.backgroundLastMouse.y = this.mouse.y;
 
-              glMatrix.mat2d.fromTranslation(this.backgroundTranslateMatrix, [this.offset.x, this.offset.y])
+              glMatrix.mat2d.fromTranslation(this.backgroundTranslateMatrix, [this.offset.x, this.offset.y]);
             }
           },
           fixOffset(offset) {
-            const ret = { x: offset.x, y: offset.y }
+            const ret = { x: offset.x, y: offset.y };
 
-            const cropRatio = this.cropWidth / this.cropHeight
-            const imgRatio = this.img.naturalWidth / this.img.naturalHeight
+            const cropRatio = this.cropWidth / this.cropHeight;
+            const imgRatio = this.img.naturalWidth / this.img.naturalHeight;
 
             if (imgRatio > cropRatio) {
-              let overlayX = this.img.naturalWidth - this.backgroundCropMax.width * this.scale
+              let overlayX = this.img.naturalWidth - this.backgroundCropMax.width * this.scale;
               if (this.rad === Math.PI / 2) {
-                overlayX = this.img.naturalWidth - this.backgroundCropMax.height * this.scale
+                overlayX = this.img.naturalWidth - this.backgroundCropMax.height * this.scale;
               }
-              ret.x = clamp(ret.x, overlayX / 2, this.img.naturalWidth - this.img.naturalWidth * this.scale - overlayX / 2)
-              ret.y = clamp(ret.y, 0, this.img.naturalHeight - this.img.naturalHeight * this.scale)
+              ret.x = clamp(ret.x, overlayX / 2, this.img.naturalWidth - this.img.naturalWidth * this.scale - overlayX / 2);
+              ret.y = clamp(ret.y, 0, this.img.naturalHeight - this.img.naturalHeight * this.scale);
             } else {
-              let overlayY = this.img.naturalHeight - this.backgroundCropMax.height * this.scale
+              let overlayY = this.img.naturalHeight - this.backgroundCropMax.height * this.scale;
               if (this.rad === Math.PI / 2) {
-                overlayY = this.img.naturalHeight - this.backgroundCropMax.width * this.scale
+                overlayY = this.img.naturalHeight - this.backgroundCropMax.width * this.scale;
               }
-              ret.y = clamp(ret.y, overlayY / 2, this.img.naturalHeight - this.img.naturalHeight * this.scale - overlayY / 2)
-              ret.x = clamp(ret.x, 0, this.img.naturalWidth - this.img.naturalWidth * this.scale)
+              ret.y = clamp(ret.y, overlayY / 2, this.img.naturalHeight - this.img.naturalHeight * this.scale - overlayY / 2);
+              ret.x = clamp(ret.x, 0, this.img.naturalWidth - this.img.naturalWidth * this.scale);
             }
 
-            return ret
+            return ret;
           },
           handleMouseWheel(e) {
-            const lastScale = this.scale
+            const lastScale = this.scale;
             if (e.wheelDelta > 0) {
-              this.scale *= 1.1
+              this.scale *= 1.02;
             } else {
-              this.scale *= 1 / 1.1
+              this.scale *= 1 / 1.02;
               if (this.scale < 1) {
-                this.scale = 1
+                this.scale = 1;
               }
             }
 
             // 1. 根据鼠标位置缩放
             // 2. 去掉旋转变换
-            const resultMatrix = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundTranslateMatrix)
-            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, this.backgroundScaleMatrix)
-            const invert = glMatrix.mat2d.invert([], resultMatrix)
-            const vec2_point = glMatrix.vec2.transformMat2d([], [this.mouse.x, this.mouse.y], invert)
-            const point = { x: vec2_point[0], y: vec2_point[1] }
+            const resultMatrix = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundTranslateMatrix);
+            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, this.backgroundScaleMatrix);
+            const invert = glMatrix.mat2d.invert([], resultMatrix);
+            const vec2_point = glMatrix.vec2.transformMat2d([], [this.mouse.x, this.mouse.y], invert);
+            const point = { x: vec2_point[0], y: vec2_point[1] };
 
-            const center = this.convertCanvasToOffset(point, lastScale)
-            const newCenter = this.convertCanvasToOffset(point, this.scale)
+            const center = this.convertCanvasToOffset(point, lastScale);
+            const newCenter = this.convertCanvasToOffset(point, this.scale);
 
-            const delta = { x: newCenter.x - center.x, y: newCenter.y - center.y }
-            this.offset.x -= delta.x
-            this.offset.y -= delta.y
+            const delta = { x: newCenter.x - center.x, y: newCenter.y - center.y };
+            this.offset.x -= delta.x;
+            this.offset.y -= delta.y;
 
-            this.offset = this.fixOffset(this.offset)
+            this.offset = this.fixOffset(this.offset);
 
-            glMatrix.mat2d.fromScaling(this.backgroundScaleMatrix, [this.scale, this.scale])
-            glMatrix.mat2d.fromTranslation(this.backgroundTranslateMatrix, [this.offset.x, this.offset.y])
+            glMatrix.mat2d.fromScaling(this.backgroundScaleMatrix, [this.scale, this.scale]);
+            glMatrix.mat2d.fromTranslation(this.backgroundTranslateMatrix, [this.offset.x, this.offset.y]);
           },
           convertCanvasToOffset(pos, scale) {
-            const out = { x: 0, y: 0 }
-            out.x = pos.x * scale - this.offset.x
-            out.y = pos.y * scale - this.offset.y
-            return out
+            const out = { x: 0, y: 0 };
+            out.x = pos.x * scale - this.offset.x;
+            out.y = pos.y * scale - this.offset.y;
+            return out;
           },
           render() {
-            this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
+            this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
             if (this.img) {
-              this.calcImage()
-              this.renderImage()
+              this.calcImage();
+              this.renderImage();
             }
-            this.drawCropFrame()
-            requestAnimationFrame(this.render)
+            this.drawCropFrame();
+            requestAnimationFrame(this.render);
           },
           renderImage() {
-            const resultMatrix = glMatrix.mat2d.multiply([], this.backgroundResizeMatrix, this.backgroundTranslateMatrix)
-            glMatrix.mat2d.multiply(resultMatrix, resultMatrix, this.backgroundScaleMatrix)
-            glMatrix.mat2d.multiply(this.backgroundResultMatrix, resultMatrix, this.backgroundRotateMatrix)
+            glMatrix.mat2d.multiply(this.backgroundResultMatrix, this.backgroundResizeMatrix, this.backgroundTranslateMatrix);
+            glMatrix.mat2d.multiply(this.backgroundResultMatrix, this.backgroundResultMatrix, this.backgroundScaleMatrix);
+            glMatrix.mat2d.multiply(this.backgroundResultMatrix, this.backgroundResultMatrix, this.backgroundRotateMatrix);
 
-            const { ctx } = this
-            ctx.save()
-            ctx.transform(...this.backgroundResultMatrix)
+            const { ctx } = this;
+            ctx.save();
+            ctx.transform(...this.backgroundResultMatrix);
 
-            ctx.drawImage(this.img, 0, 0, this.img.naturalWidth, this.img.naturalHeight, 0, 0, this.img.naturalWidth, this.img.naturalHeight)
-            ctx.restore()
+            ctx.drawImage(
+              this.img,
+              0,
+              0,
+              this.img.naturalWidth,
+              this.img.naturalHeight,
+              0,
+              0,
+              this.img.naturalWidth,
+              this.img.naturalHeight
+            );
+            ctx.restore();
           },
           resize() {
-            this.canvasWidth = this.ksize.width
-            this.canvasHeight = this.ksize.height
+            this.canvasWidth = this.ksize.width;
+            this.canvasHeight = this.ksize.height;
           },
           updateCropperInnerRectCenter() {
             const center = {
               x: (this.backgroundCropperInnerRect.leftUpper.x + this.backgroundCropperInnerRect.rightLower.x) / 2,
               y: (this.backgroundCropperInnerRect.rightUpper.y + this.backgroundCropperInnerRect.leftLower.y) / 2,
-            }
-            this.cropperInnerRectCenter = center
+            };
+            this.cropperInnerRectCenter = center;
           },
         },
-      })
+      });
     </script>
     <script>
       function clamp(value, minValue, maxValue) {
         if (minValue > maxValue) {
-          ;[minValue, maxValue] = [maxValue, minValue]
+          [minValue, maxValue] = [maxValue, minValue];
         }
 
-        return Math.max(minValue, Math.min(value, maxValue))
+        return Math.max(minValue, Math.min(value, maxValue));
       }
     </script>
   </body>
