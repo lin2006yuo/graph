@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Matrix - Gesture</title>
+    <script src="../glMatrix.js"></script>
+    <script src="../size.js"></script>
+    <script src="./transform-matrix.mini.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  </head>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+    }
+
+    #app {
+      padding: 10px;
+    }
+
+    .operator {
+      margin-left: 20px;
+    }
+
+    .operator h4 {
+      margin-right: 8px;
+    }
+
+    .flex {
+      display: flex;
+    }
+
+    .flex-align-center {
+      align-items: center;
+    }
+
+    .flex-justify-center {
+      justify-content: center;
+    }
+
+    .range-slider {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      width: 10rem;
+      height: 0.25rem;
+      outline: none;
+      border-radius: 0.25rem;
+      background-color: #000;
+    }
+
+    .range-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 1rem;
+      height: 1rem;
+      background-color: #fff;
+      border: 0.25rem solid #000;
+      border-radius: 1rem;
+      cursor: pointer;
+    }
+  </style>
+
+  <body>
+    <div id="app">
+      <div>
+        <div class="flex">
+          <canvas id="canvas"></canvas>
+          <div class="operator">
+            <div class="flex flex-align-center">
+              <h4>originX</h4>
+              <input type="number" @input="handleOriginXChange" :value="operateOriginX" />
+            </div>
+            <div class="flex flex-align-center">
+              <h4>originY</h4>
+              <input type="number" @input="handleOriginYChange" :value="operateOriginY" />
+            </div>
+            <div class="flex flex-align-center">
+              <button @click="handleOriginCenter">基于中心旋转</button>
+            </div>
+          </div>
+        </div>
+        <div>
+          <h4>basic</h4>
+          <div><span>mouse</span><span>x: {{mouse.x}}</span><span>y: {{mouse.y}}</span></div>
+          <h4>ball</h4>
+          <div><span>width: </span> <span v-if="ball">{{ball.width}}</span></div>
+          <div><span>height: </span> <span v-if="ball">{{ball.height}}</span></div>
+          <strong>vertex</strong>
+          <div><span>p0: </span> <span v-if="ball">{{ball.vertex[0].x}}</span> <span v-if="ball">{{ball.vertex[0].y}}</span></div>
+          <div><span>p1: </span> <span v-if="ball">{{ball.vertex[1].x}}</span> <span v-if="ball">{{ball.vertex[1].y}}</span></div>
+          <div><span>p2: </span> <span v-if="ball">{{ball.vertex[2].x}}</span> <span v-if="ball">{{ball.vertex[2].y}}</span></div>
+          <div><span>p3: </span> <span v-if="ball">{{ball.vertex[3].x}}</span> <span v-if="ball">{{ball.vertex[3].y}}</span></div>
+          <strong>transform</strong>
+          <div><span>translateX: </span> <span v-if="ball">{{ball.translateX}}</span></div>
+          <div><span>translateY: </span> <span v-if="ball">{{ball.translateY}}</span></div>
+          <div><span>rad: </span><span v-if="ball">{{ball.rad}} (angle: {{angle}})</span></div>
+          <div><span>scaleX: </span><span v-if="ball">{{ball.scaleX}}</span></div>
+          <div><span>scaleY: </span><span v-if="ball">{{ball.scaleY}}</span></div>
+          <div><span>originX: </span><span v-if="ball">{{ball.originX}}</span></div>
+          <div><span>originY: </span><span v-if="ball">{{ball.originY}}</span></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { applyToPoint, applyToPoints, transform, fromObject, translate, rotate, inverse, rotateDEG, identity, scale } = TransformationMatrix
+      function distance(x1, y1, x2, y2) {
+        return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2))
+      }
+      class Ball {
+        constructor(ctx, opt) {
+          const { translateX = 0, translateY = 0, radius = 10, color = "black", rad = 0, scaleX = 1, scaleY = 1, originX = 0, originY = 0, width = 50, height = 50 } = opt
+          this.ctx = ctx
+
+          this.radius = radius
+          this.lineWidth = 1
+          this.color = color
+
+          // 基础信息
+          this.width = width
+          this.height = height
+          this.vertex = []
+          // transform信息
+          this.translateX = translateX
+          this.translateY = translateY
+          this.rad = rad
+          this.scaleX = scaleX
+          this.scaleY = scaleY
+          this.originX = originX
+          this.originY = originY
+
+          this.matrix = TransformationMatrix.identity()
+          this.transform({ translateX, translateY, rad, scaleX, scaleY, originX, originY })
+        }
+
+        transform(params) {
+          // const { translateX = this.translateX, translateY = this.translateY, rad = this.rad, scaleX = this.scaleX, scaleY = this.scaleY, originX = this.originX, originY = this.originY } = params
+          // const resultMatrix = glMatrix.mat2d.create()
+          // // 改变变换原点中心
+          // const moveOriginMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [originX, originY])
+          // // 平移矩阵
+          // const translateMatrix = glMatrix.mat2d.translate([], glMatrix.mat2d.create(), [translateX, translateY])
+          // // 旋转矩阵
+          // const rotateMatrix = glMatrix.mat2d.rotate([], glMatrix.mat2d.create(), rad)
+          // // 缩放矩阵
+          // const scaleMatrix = glMatrix.mat2d.scale([], glMatrix.mat2d.create(), [scaleX, scaleY])
+          // // 计算最终矩阵
+          // // glMatrix.mat2d.multiply(resultMatrix, rotateMatrix, translateMatrix) // 先旋转再平移
+          // glMatrix.mat2d.multiply(resultMatrix, translateMatrix, rotateMatrix) // 先平移再旋转
+          // glMatrix.mat2d.multiply(resultMatrix, resultMatrix, scaleMatrix)
+          // glMatrix.mat2d.multiply(resultMatrix, resultMatrix, moveOriginMatrix)
+          // let aa = resultMatrix[0],
+          //   ab = resultMatrix[1],
+          //   ac = resultMatrix[2],
+          //   ad = resultMatrix[3]
+          // const det = aa * ad - ab * ac
+          // this.translateX = translateX
+          // this.translateY = translateY
+          // this.rad = rad
+          // this.scaleX = scaleX
+          // this.scaleY = scaleY
+          // this.originX = originX
+          // this.originY = originY
+          // // 行列式为0，不能转置，会导致后面的计算出错，所以为0时不赋值（⚠️）
+          // if (det) {
+          //   // this.matrix = resultMatrix
+          // }
+        }
+
+        /**
+         * 判断是否在右下角顶点内
+         * */
+        isOverBR(point) {
+          const { x, y } = point
+          const vec = applyToPoint(this.matrix, { x: this.width, y: this.height })
+          const br = { x: 0, y: 0 }
+          br.x = vec.x - this.originX
+          br.y = vec.y - this.originY
+          return distance(x, y, br.x, br.y) < this.radius + this.lineWidth
+        }
+
+        // 判断点是否在矩形内
+        isOverBody(point) {
+          const A = this.vertex[3] //左下顶点
+          const B = this.vertex[0] //左上顶点
+          const C = this.vertex[1] //右上顶点
+          const D = this.vertex[2] //右下顶点
+
+          const a = (B.x - A.x) * (point.y - A.y) - (B.y - A.y) * (point.x - A.x)
+          const b = (C.x - B.x) * (point.y - B.y) - (C.y - B.y) * (point.x - B.x)
+          const c = (D.x - C.x) * (point.y - C.y) - (D.y - C.y) * (point.x - C.x)
+          const d = (A.x - D.x) * (point.y - D.y) - (A.y - D.y) * (point.x - D.x)
+
+          if ((a > 0 && b > 0 && c > 0 && d > 0) || (a < 0 && b < 0 && c < 0 && d < 0)) {
+            return true
+          }
+          return false
+        }
+
+        // 判断是否在右下角顶点边缘
+        isOverBRPadding(point) {
+          const { x, y } = point
+          const padding = 20
+          const vec = applyToPoint(this.matrix, { x: this.width, y: this.height })
+          const br = { x: 0, y: 0 }
+          br.x = vec.x - this.originX
+          br.y = vec.y - this.originY
+          return distance(x, y, br.x, br.y) < this.radius + padding + this.lineWidth
+        }
+
+        get originPos() {
+          const vec_origin = glMatrix.vec2.transformMat2d([], [-this.originX, -this.originY], this.matrix)
+          return { x: vec_origin[0] - this.originX, y: vec_origin[1] - this.originY }
+        }
+
+        draw() {
+          // // 画一个矩形
+          // const vec2_p0 = glMatrix.vec2.transformMat2d([], [0, 0], this.matrix)
+          // const vec2_p1 = glMatrix.vec2.transformMat2d([], [this.width, 0], this.matrix)
+          // const vec2_p2 = glMatrix.vec2.transformMat2d([], [this.width, this.height], this.matrix)
+          // const vec2_p3 = glMatrix.vec2.transformMat2d([], [0, this.height], this.matrix)
+
+          let upperLeft = { x: 0, y: 0 }
+          let upperRight = { x: this.width, y: 0 }
+          let bottomRight = { x: this.width, y: this.height }
+          let bottomLeft = { x: 0, y: this.height }
+
+          ;[upperLeft, upperRight, bottomRight, bottomLeft] = TransformationMatrix.applyToPoints(this.matrix, [upperLeft, upperRight, bottomRight, bottomLeft])
+
+          this.ctx.save()
+          this.ctx.lineWidth = this.lineWidth
+
+          const vertex = [upperLeft, upperRight, bottomRight, bottomLeft]
+          this.vertex = vertex
+
+          // 绘制矩形
+          this.ctx.beginPath()
+          this.ctx.lineWidth = "5"
+          this.ctx.moveTo(vertex[0].x, vertex[0].y)
+          for (let i = 0; i < vertex.length; i++) {
+            const point = vertex[i]
+            this.ctx.lineTo(point.x, point.y)
+          }
+          this.ctx.closePath()
+          this.ctx.stroke()
+
+          // 绘制4个顶点
+          for (let i = 0; i < vertex.length; i++) {
+            this.ctx.fillStyle = this.color
+            const point = vertex[i]
+
+            // 可操作的顶点
+            if (i === 2) {
+              this.ctx.beginPath()
+              this.ctx.lineWidth = "10"
+              this.ctx.fillStyle = "white"
+              this.ctx.strokeStyle = "black"
+              this.ctx.arc(point.x, point.y, this.radius, 0, 2 * Math.PI)
+              this.ctx.stroke()
+              this.ctx.fill()
+              this.ctx.closePath()
+              continue
+            }
+
+            this.ctx.beginPath()
+            this.ctx.arc(point.x, point.y, this.radius, 0, 2 * Math.PI)
+            this.ctx.fill()
+            this.ctx.closePath()
+          }
+
+          // 绘制原点
+          this.ctx.beginPath()
+          this.ctx.fillStyle = "black"
+          this.ctx.arc(this.originPos.x, this.originPos.y, 5, 0, 2 * Math.PI)
+          this.ctx.fill()
+          this.ctx.closePath()
+
+          this.ctx.restore()
+        }
+      }
+
+      let vm = new Vue({
+        el: "#app",
+        data() {
+          return {
+            canvas: null,
+            canvasWidth: 0,
+            canvasHeight: 0,
+            ctx: null,
+
+            operateOriginX: 0,
+            operateOriginY: 0,
+
+            ball: null,
+            mouse: { x: 0, y: 0 },
+
+            isMouseDownBR: false,
+            isMouseDownBody: false,
+            isMouseDownBRPadding: false,
+
+            // 缩放
+            downMouseOffset: { x: 0, y: 0 }, // 点击时鼠标位置
+            lastScale: [1, 1],
+            // 移动/旋转
+            lastMouseOffset: { x: 0, y: 0 } // 上一次鼠标位置
+          }
+        },
+        computed: {
+          angle() {
+            return (360 * this.ball.rad) / (2 * Math.PI)
+          }
+        },
+        mounted() {
+          const {
+            canvas,
+            width: canvasWidth,
+            height: canvasHeight
+          } = new KSize("canvas", {
+            width: 500,
+            height: 500
+          })
+          this.canvas = canvas
+          this.canvasWidth = canvasWidth
+          this.canvasHeight = canvasHeight
+
+          this.ctx = canvas.getContext("2d")
+          this.ball = new Ball(this.ctx, {
+            translateX: this.operateX,
+            translateY: this.operateY,
+            // rad: (45 * Math.PI) / 180,
+            width: 50,
+            height: 50
+          })
+
+          canvas.addEventListener("mousedown", this.handleMouseDown)
+          window.addEventListener("mousemove", this.handleMouseMove)
+          window.addEventListener("mouseup", this.handleMouseUp)
+
+          this.render()
+        },
+        beforeDestroy() {
+          canvas.removeEventListener("mousedown", this.handleMouseDown)
+          window.removeEventListener("mousemove", this.handleMouseMove)
+          window.removeEventListener("mouseup", this.handleMouseUp)
+        },
+        methods: {
+          render() {
+            this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight)
+            this.ball.draw()
+            requestAnimationFrame(this.render)
+          },
+          handleMouseDown(e) {
+            const isOverBR = this.ball.isOverBR(this.getMousePos(e))
+            const isOverBody = this.ball.isOverBody(this.getMousePos(e))
+            const isOverBRPadding = this.ball.isOverBRPadding(this.getMousePos(e))
+
+            if (isOverBR && this.ball) {
+              // 缩放
+              const vec2_p2 = this.ball.vertex[2]
+              this.isMouseDownBR = true
+              this.downMouseOffset.x = vec2_p2.x
+              this.downMouseOffset.y = vec2_p2.y
+
+              this.lastScale = [this.ball.scaleX, this.ball.scaleY]
+
+              this.lastMouseOffset.x = this.mouse.x
+              this.lastMouseOffset.y = this.mouse.y
+            } else if (isOverBody && this.ball) {
+              // 移动
+              this.isMouseDownBody = true
+              this.lastMouseOffset.x = this.mouse.x
+              this.lastMouseOffset.y = this.mouse.y
+            } else if (isOverBRPadding && this.ball) {
+              // 旋转
+              this.isMouseDownBRPadding = true
+              this.lastMouseOffset.x = this.mouse.x
+              this.lastMouseOffset.y = this.mouse.y
+            }
+          },
+          handleMouseMove(e) {
+            const isOverBR = this.ball.isOverBR(this.getMousePos(e))
+            const isOverBody = this.ball.isOverBody(this.getMousePos(e))
+            const isOverBRPadding = this.ball.isOverBRPadding(this.getMousePos(e))
+            const currentOffset = { x: this.mouse.x, y: this.mouse.y }
+
+            if (isOverBR) {
+              this.canvas.style.cursor = "se-resize"
+            } else if (isOverBody) {
+              this.canvas.style.cursor = "move"
+            } else if (isOverBRPadding) {
+              this.canvas.style.cursor = "crosshair"
+            } else {
+              this.canvas.style.cursor = ""
+            }
+
+            if (this.isMouseDownBR) {
+              // 缩放操作
+              const deltaScaleX = this.getViewPoint(currentOffset).x / this.getViewPoint(this.lastMouseOffset).x
+              const deltaScaleY = this.getViewPoint(currentOffset).y / this.getViewPoint(this.lastMouseOffset).y
+              const origin = this.getViewPoint(this.ball.vertex[0])
+              this.ball.scaleX *= deltaScaleX
+              this.ball.scaleY *= deltaScaleY
+              this.ball.matrix = transform(fromObject(this.ball.matrix), transform(translate(origin.x, origin.y), scale(deltaScaleX, deltaScaleY), translate(-origin.x, -origin.y)))
+            } else if (this.isMouseDownBody) {
+              const deltaX = this.getViewPoint(currentOffset).x - this.getViewPoint(this.lastMouseOffset).x
+              const deltaY = this.getViewPoint(currentOffset).y - this.getViewPoint(this.lastMouseOffset).y
+
+              this.ball.matrix = transform(fromObject(this.ball.matrix), translate(deltaX, deltaY))
+            } else if (this.isMouseDownBRPadding) {
+              // 旋转操作
+              // const last_rad = Math.atan2(this.lastMouseOffset.x - this.ball.originPos.x, this.lastMouseOffset.y - this.ball.originPos.y)
+              // const cur_rad = Math.atan2(currentOffset.x - this.ball.originPos.x, currentOffset.y - this.ball.originPos.y)
+
+              const deltaRad =
+                Math.atan2(this.getViewPoint(this.lastMouseOffset).x, this.getViewPoint(this.lastMouseOffset).y) - Math.atan2(this.getViewPoint(currentOffset).x, this.getViewPoint(currentOffset).y)
+              const origin = this.getViewPoint(this.ball.vertex[0])
+              const p = this.ball.scaleX / this.ball.scaleY
+              this.ball.matrix = transform(
+                fromObject(this.ball.matrix),
+                transform(
+                  fromObject({ a: 1, b: 0, c: 0, d: p, e: 0, f: 0 }),
+                  rotate(deltaRad, origin),
+                  fromObject({ a: 1, b: 0, c: 0, d: 1 / p, e: 0, f: 0 }),
+                )
+              )
+            }
+
+            this.lastMouseOffset.x = currentOffset.x
+            this.lastMouseOffset.y = currentOffset.y
+          },
+          handleMouseUp() {
+            if (this.isMouseDownBR) {
+              this.isMouseDownBR = false
+              this.lastScale = [this.ball.scaleX, this.ball.scaleY]
+            }
+            if (this.isMouseDownBody) {
+              this.isMouseDownBody = false
+            }
+            if (this.isMouseDownBRPadding) {
+              this.isMouseDownBRPadding = false
+            }
+          },
+          getMousePos(e) {
+            this.mouse.x = (e.pageX - this.canvas.offsetLeft) * 2 // 2 is canvas hidpi ratio
+            this.mouse.y = (e.pageY - this.canvas.offsetTop) * 2
+            return {
+              x: this.mouse.x,
+              y: this.mouse.y
+            }
+          },
+          handleOriginXChange(e) {
+            const v = Number(e.currentTarget.value)
+            this.operateOriginX = v
+            this.ball.transform({ originX: v })
+          },
+          handleOriginYChange(e) {
+            const v = Number(e.currentTarget.value)
+            this.operateOriginY = v
+            this.ball.transform({ originY: v })
+          },
+          handleOriginCenter() {
+            this.operateOriginX = -this.ball.width / 2
+            this.operateOriginY = -this.ball.height / 2
+            this.ball.transform({ originX: this.operateOriginX, originY: this.operateOriginY })
+          },
+
+          getViewPoint(point) {
+            let matrix = TransformationMatrix.fromObject(this.ball.matrix)
+
+            let inverseMatrix = TransformationMatrix.inverse(matrix)
+            return TransformationMatrix.applyToPoint(inverseMatrix, point)
+          },
+
+          // ---------------------- 工具函数 -----------------------
+          calcBallScale(p1, p2) {
+            const invert_matrix = glMatrix.mat2d.invert([], this.ball.matrix)
+            if (!invert_matrix) {
+              return null
+            }
+            const vec2_origin = glMatrix.vec2.transformMat2d([], [this.ball.originPos.x, this.ball.originPos.y], invert_matrix)
+            const vec2_p1 = glMatrix.vec2.transformMat2d([], [p1.x, p1.y], invert_matrix) // currentOffset Last
+            const vec2_p2 = glMatrix.vec2.transformMat2d([], [p2.x, p2.y], invert_matrix)
+
+            const scaleRatioX = (vec2_p1[0] - vec2_origin[0]) / (vec2_p2[0] - vec2_origin[0])
+            const scaleRatioY = (vec2_p1[1] - vec2_origin[1]) / (vec2_p2[1] - vec2_origin[1])
+            return {
+              scaleX: scaleRatioX,
+              scaleY: scaleRatioY
+            }
+          }
+        }
+      })
+    </script>
+  </body>
+</html>
