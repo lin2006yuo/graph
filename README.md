@@ -1,3 +1,68 @@
+## 本地运行
+
+本项目是原生 HTML + CSS + ES Module 的静态站点：浏览器直接加载源码，没有打包、编译步骤。
+
+### 环境要求
+
+- 静态文件服务器：Python 3，或 Node.js（`npx serve`）
+- 支持 ES Module 的现代浏览器
+
+### 安装
+
+仓库内没有 `package.json`，也没有 npm 依赖，不需要执行 `npm install`。使用 `npx serve` 时，首次运行会临时下载 `serve`。
+
+### 启动
+
+在仓库根目录执行任一命令：
+
+```bash
+# 方式一：Python 3
+python3 -m http.server 5502
+```
+
+```bash
+# 方式二：Node.js
+npx serve -l 5502 .
+```
+
+然后访问 <http://localhost:5502/>：根目录 `index.html` 是画布编辑器入口。各 demo 页面的地址与仓库路径一致，例如：
+
+- <http://localhost:5502/test/tulipa/index.html>
+- <http://localhost:5502/test/timeline/index2.html>
+
+> 不要直接双击 HTML 文件用 `file://` 打开，浏览器会拦截 ES Module 加载。VS Code Live Server 插件同样可用，仓库已在 `.vscode/settings.json` 中配置端口 `5502`。
+
+### 构建
+
+没有构建步骤，也不需要生成产物：源码即部署文件，把仓库根目录作为静态站点根目录部署即可。现有 demo 部署在 Vercel 上（见下文 demo 链接）。
+
+## 目录说明
+
+| 路径 | 职责 |
+| --- | --- |
+| `index.html` | 页面入口：加载样式和 `index.mjs`，提供 `#main` 容器 |
+| `index.mjs` | 启动脚本：创建 `Editor`，窗口尺寸变化时调用 `graphcanvas.resize()` |
+| `editor.mjs` | 编辑器组件：生成 canvas DOM，创建 `Graph` 与 `GraphCanvas`，设置网格背景 |
+| `src/graph.mjs` | 图数据模型：维护节点集合与 id、注册节点类型（`registerNodeType` / `wrapFunctionAsNode`）、关联画布并广播重绘 |
+| `src/graph_node.mjs` | 节点基类：标题、尺寸与坐标，输入/输出槽位，连接与断开，命中检测 |
+| `src/link.mjs` | 连线数据：记录起点/终点节点及槽位，支持序列化与还原 |
+| `src/graph_canvas.mjs` | 画布与交互核心：渲染循环，网格/节点/连线绘制，鼠标事件，节点拖拽与缩放、连线、选择（Shift 多选）和右键菜单 |
+| `src/context_menu.mjs` | 右键菜单组件：菜单 DOM、子菜单展开与关闭 |
+| `src/drag_and_scale.mjs` | 视口变换：维护缩放和偏移、计算可视区域、按缩放中心换算坐标 |
+| `src/utils.mjs` | 几何工具：包围盒相交、点与矩形判定、两点距离 |
+| `src/base.mjs` | 基础扩展：为 Canvas 2D 上下文补 `roundRect`，并注册示例节点类型（`base_output`、`base_input`、`basic/length`） |
+| `style/style.css` | 全局页面样式：全屏布局与暗色主题 |
+| `style/editor.css` | 编辑器容器样式：让画布铺满可用高度 |
+| `style/graph.css` | 右键菜单与菜单项状态样式 |
+| `test/` | 独立 demo：`tulipa` 郁金香动画、`timeline` 时间轴、`matrix` 选择框/矩阵变换、`drag` 拖拽、`scale` 缩放、`coord` 坐标系、`image-drag-scale` 图片拖拽缩放；`test/*.js` 是演示用辅助库（mini Vue、glMatrix、尺寸/Mouse 工具等） |
+| `example/` | 独立效果示例：`balls` 弹性小球/粘体动画，`canvas` 矩阵变换；`Mouse.js`、`hidpi-canvas.js` 为辅助脚本 |
+| `img/` | 示例图片与画布网格背景 `grid.png` |
+| `.vscode/settings.json` | 本地开发配置：VS Code Live Server 使用端口 `5502` |
+
+渲染链路：`index.mjs` → `editor.mjs` 创建 `Graph` 与 `GraphCanvas`；`Graph`/`GraphNode`/`Link` 负责数据，`GraphCanvas` 负责绘制、事件和视口变换。
+
+---
+
 ### 郁金香 [demo](https://graph-three.vercel.app/test/tulipa/index.html)
 ---
 
