@@ -1,3 +1,43 @@
+## 本地运行
+
+本项目是原生 HTML + CSS + ES Module 的静态站点：浏览器直接加载源码，没有打包、编译步骤。
+
+### 环境要求
+
+- 静态文件服务器：Python 3，或 Node.js（`npx serve`）
+- 支持 ES Module 的现代浏览器
+
+### 安装
+
+仓库内没有 `package.json`，也没有 npm 依赖，不需要执行 `npm install`。使用 `npx serve` 时，首次运行会临时下载 `serve`。
+
+### 启动
+
+在仓库根目录执行任一命令：
+
+```bash
+# 方式一：Python 3
+python3 -m http.server 5502
+```
+
+```bash
+# 方式二：Node.js
+npx serve -l 5502 .
+```
+
+然后访问 <http://localhost:5502/>：根目录 `index.html` 是画布编辑器入口。各 demo 页面的地址与仓库路径一致，例如：
+
+- <http://localhost:5502/test/tulipa/index.html>
+- <http://localhost:5502/test/timeline/index2.html>
+
+> 不要直接双击 HTML 文件用 `file://` 打开，浏览器会拦截 ES Module 加载。VS Code Live Server 插件同样可用，仓库已在 `.vscode/settings.json` 中配置端口 `5502`。
+
+### 构建
+
+没有构建步骤，也不需要生成产物：源码即部署文件，把仓库根目录作为静态站点根目录部署即可。现有 demo 部署在 Vercel 上（见下文 demo 链接）。
+
+---
+
 ### 郁金香 [demo](https://graph-three.vercel.app/test/tulipa/index.html)
 ---
 
