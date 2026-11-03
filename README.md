@@ -1,6 +1,30 @@
-## 本地运行
+# Graph
 
-本项目是原生 HTML + CSS + ES Module 的静态站点：浏览器直接加载源码，没有打包、编译步骤。
+基于原生 Canvas 2D 与 ES Module 的节点图编辑器，以及一组围绕画布缩放、拖拽、坐标系和矩阵变换的交互实验。
+
+项目没有构建步骤：`index.html` 直接加载 `index.mjs`，由 `Editor` 创建 `Graph` 与 `GraphCanvas`，在 Canvas 上绘制网格、节点和连线。`test/`、`example/` 下的页面是彼此独立的实验，可以单独打开。
+
+> 项目状态：个人实验项目。画布渲染和基础交互已完成；节点执行与数据流尚未接入，API 可能继续调整。
+
+## Demo
+
+| 页面 | 说明 | 链接 |
+| --- | --- | --- |
+| 流程图编辑器 | 节点创建、拖拽、缩放、连线和右键菜单 | [源码](index.html) / [demo](https://graph-three.vercel.app/) |
+| 郁金香 | 用向量与动画绘制郁金香 | [源码](test/tulipa/index.html) / [demo](https://graph-three.vercel.app/test/tulipa/index.html) |
+| 时间轴 | 可拖拽刻度的 Canvas 时间轴 | [源码](test/timeline/index2.html) / [demo](https://graph-three.vercel.app/test/timeline/index2.html) |
+| 选择框 | 矩形选择与矩阵变换，含手势版本 | [源码](test/matrix/index.html) / [demo](https://graph-three.vercel.app/test/matrix/index.html) |
+| Jelly Effect | 弹性小球动画 | [源码](example/balls/index.html) / [demo](https://graph-three.vercel.app/example/balls/index.html) |
+| 粘体（Slime） | 小球之间的粘连效果 | [源码](example/balls/slime/index.html) / [demo](https://graph-three.vercel.app/example/balls/slime/index.html) |
+| 画布缩放 | 以鼠标位置为锚点缩放 | [源码](test/scale/index.html) / [demo](https://graph-three.vercel.app/test/scale/index.html) |
+| 画布拖拽 | 拖拽画布的两种实现与错误示例 | [源码](test/drag/index.html) / [demo](https://graph-three.vercel.app/test/drag/index.html) |
+| 坐标系 | 屏幕坐标与画布坐标的转换 | [源码](test/coord/index.html) / [demo](https://graph-three.vercel.app/test/coord/index.html) |
+| 图片拖拽缩放 | 图片的拖拽、缩放与矩阵组合 | [源码](test/image-drag-scale/index.html) / [demo](https://graph-three.vercel.app/test/image-drag-scale/index.html) |
+| 矩阵变换 | 用 3×3 矩阵操作 Canvas | [源码](example/canvas/mat.html) / [demo](https://graph-three.vercel.app/example/canvas/mat.html) |
+
+`test/matrix` 与 `test/image-drag-scale` 下还有多个变体页面（`index-basic`、`index-gesture*`、`index_02`～`index_08` 等），路径规则与在线地址一致。
+
+## 快速开始
 
 ### 环境要求
 
@@ -34,9 +58,9 @@ npx serve -l 5502 .
 
 ### 构建
 
-没有构建步骤，也不需要生成产物：源码即部署文件，把仓库根目录作为静态站点根目录部署即可。现有 demo 部署在 Vercel 上（见下文 demo 链接）。
+没有构建步骤，也不需要生成产物：源码即部署文件，把仓库根目录作为静态站点根目录部署即可。现有 demo 部署在 Vercel 上（见上文 demo 链接）。
 
-## 目录说明
+## 目录结构
 
 | 路径 | 职责 |
 | --- | --- |
@@ -61,199 +85,138 @@ npx serve -l 5502 .
 
 渲染链路：`index.mjs` → `editor.mjs` 创建 `Graph` 与 `GraphCanvas`；`Graph`/`GraphNode`/`Link` 负责数据，`GraphCanvas` 负责绘制、事件和视口变换。
 
----
+## 实现笔记
 
-### 郁金香 [demo](https://graph-three.vercel.app/test/tulipa/index.html)
----
+### 渲染循环
 
-### 时间轴 [Timeline](https://graph-three.vercel.app/test/timeline/index2.html)
----
-### 选择框 [demo](https://graph-three.vercel.app/test/matrix/index.html)  
-基本版本 [demo](https://graph-three.vercel.app/test/matrix/index-basic.html)   
-拖拽版本 [demo](https://graph-three.vercel.app/test/matrix/index-gesture.html) 
-> 矩阵变换
+`GraphCanvas(canvas, graph)` 的初始化流程：
 
+- `graph.attachCanvas(this)`：把 graph 和 GraphCanvas 关联起来。
+- `setCanvas(canvas)`：保存 canvas、创建离屏的 `bgcanvas`、获取 2D 上下文。
+- `bindEvents()`：绑定滚轮、鼠标和 `contextmenu` 事件。
+- `startRendering()`：用 `requestAnimationFrame` 持续调用 `draw()`。
+- `draw()`：`ds.computeVisibleArea()` 计算可视区域 → `drawBackCanvas()` 绘制网格/背景 → `drawFrontCanvas()` 绘制节点、连线和选中框。
 
----
-### Jelly Effect
-ball [demo](https://graph-three.vercel.app/example/balls/index.html)    
-粘体 [demo](https://graph-three.vercel.app/example/balls/slime/index.html)  
+`drawFrontCanvas` 会先用 `ctx.drawImage(this.bgcanvas, 0, 0)` 画上离屏背景。绘制路径前要调用 `ctx.beginPath()`——它清空的是当前路径，不是画布内容。
 
----
-  
+### 缩放
 
-## 流程图
+滚轮事件调整 scale 后，以鼠标位置为缩放中心重绘：
 
-[preview](https://graph.lin2006yuo.vercel.app/)  
-~~发育中...~~(2021.1.10 太监了)  
-**bg**  
-zoom - done  
-drag - done  
-menu - done  
-node  
-1. 创建 - done
-2. 拖拽 - done
-3. 缩放 - done
+1. 根据滚轮事件计算新的 scale。
+2. `ctx.save()` 后设置 `ctx.scale(scale, scale)` 和 `ctx.translate(offsetX, offsetY)`。
+3. 绘制离屏画布：`ctx.drawImage(this.bgcanvas, 0, 0)`。
+4. `ctx.restore()` 恢复状态。
 
----
+#### 为什么要 `save` / `restore`
 
-## mark
+`ctx.scale()` 会修改当前变换矩阵，而且会一直累积。每帧绘制前 `save()`、绘制后 `restore()`，下一次绘制才能重新从 `scale = 1` 开始；否则 scale 会按帧连乘：1 → 1.1 → 1.2 会变成 `1 * 1.1 * 1.2`，缩放速度越来越快。
 
-GraphCanvas(canvas, graph)
+#### 缩放原点
 
-- graph.attachCanvas 将 graph 和 graphcanvas 关联
-- setCanvas 导入 canvas 对象
-- bindEvent
-- startRending
-- draw \*requestAnimation 持续绘制
-- ds.computeVisibleArea 计算可视区域
-- drawBackCanvas \*网格
-- drawFrontCanvase  
-  ⚠
+Canvas 的缩放原点默认为左上角 `(0, 0)`，没有直接修改原点的 API，需要配合 `translate` 实现。
 
-1. beginPath 清除 path
+若希望点 `(x, y)` 在缩放后保持不动，缩放比为 `n` 时，需要平移：
 
-### 缩放 [demo](https://graph-three.vercel.app/test/scale/index.html)
-
-使用 ctx.dragImage(canvas, 0, 0), 具体流程：
-
-1. 根据滚轮事件调整 scale 大小
-2. 设置 canvas 的 scale `ctx.scale(scale, scale)`, 设置 canvas`translate(offsetX, offsetY)`
-3. 绘制`ctx.dragImage(canvas, 0, 0)`
-
-#### **ctx.save**
-
-注意在绘制前需要`ctx.save()`存储当前状态，绘制后再重置`ctx.restore()`。因为`scale`的变化都是基于初始状态，也就是`scale = 1`，如果不重置，那么下一次`scale`变化就是基于上一次的`scale`变化，会导致`scale`过快的情况。  
-举例： `scale`变化情况为 1 -> 1.1. -> 1.2 -> 1.3 -> 1.4，第一次`scale`后的大小为`1 * 1.1`，第二次`scale`的大小正确应该为`1 * 1.2`，如果不重置当前状态，那么第二次`scale`大小为`1.1 * 1.2`❌
-
-#### **scale-origin**
-
-canvas 缩放原点 scale-origin 默认为左上角(0,0)，在缩放的时候需要转换原点，canvas 没有提供 api，可通过 translate 实现。  
-eg: 设起始点为 a1(x, y), 缩放比为 n, 则缩放后的点为 a2(nx, ny)  
-可知: x 轴偏移值为`x - nx`，y 轴偏移的位置值为`y- ny`，（先缩放再偏移，原因比较复杂）由于做了缩放，实际上求出来的偏移值是经过缩放的，所以需要再除以 n  
-最终解: x -> (x - nx)/n = `x/n - x`  
- y -> (y - ny)/n = `y/n -y`
-
-### 拖拽 [demo](https://graph-three.vercel.app/test/drag/index.html)
-
-**拖拽两种实现方式**
-
-1. 记录点击时坐标 a1(x1, y1)，移动后的坐标 a2(x2, y2), 得出偏移值(x2 - x1, y2 - y1), 将元素坐标设置为偏移值
-
-```javascript
-let offset = [0, 0]
-let down_mouse = [x1, y1]
-let cur_mouse = [x2, y2]
-
-let delta = [x2 - x1, y2 - y1]
-
-offset[0] = delta[0]
-offset[1] = delta[1]
+```text
+(x / n - x, y / n - y)
 ```
 
-2. 上一次移动时的坐标 a1(x1, y1), 移动后的坐标 a2(x2, y2), 得出偏移值(x2 - x1, y2 - y1), 将元素坐标**累加**偏移值
+推导：缩放后该点到达 `(nx, ny)`，要移回 `(x, y)`，需要平移 `(x - nx, y - ny)`；由于 `translate` 作用在缩放后的坐标系中，实际值还要再除以 `n`，即 `(x - nx) / n = x / n - x`。
+
+在编辑器里，这段计算由 `DragAndScale.changeScale(value, [x, y])` 完成：分别算出缩放前后同一点对应的画布坐标，把差值累加到 `offset`。
+
+### 拖拽
+
+拖拽有两种常见实现：
+
+1. 记录按下时的坐标 `a1(x1, y1)` 和当前坐标 `a2(x2, y2)`，每次把偏移设置为 `(x2 - x1, y2 - y1)`。
+2. 记录上一次移动的坐标，每次把位移增量累加到偏移上。
 
 ```javascript
 let offset = [0, 0]
 let last_mouse = [x1, y1]
-let cur_mouse = [x2, y2]
 
-let delta = [x2 - x1, y2 - y1]
-// 刷新上次移动时的坐标
-last_mouse[0] = cur_mouse[0]
-last_mouse[1] = cur_mouse[1]
-// 累加， 因为偏移值是根据上一次状态
-offset[0] += delta[0]
-offset[1] += delta[1]
+function onMove(x2, y2) {
+  const delta = [x2 - last_mouse[0], y2 - last_mouse[1]]
+  last_mouse = [x2, y2]
+  // 方法 2：累加，因为 delta 是相对上一次移动的增量
+  offset[0] += delta[0]
+  offset[1] += delta[1]
+}
 ```
-**拖拽对象**  
-1. 元素  
-方法1、方法2
-2. 画布  
-拖拽画布通过`translate`方法实现，由于`translate`的转换原点`translate-origin`固定为canvas左上角(0,0)，如果用方法1实现拖拽，第二次拖拽会出现不符合预期的结果❌[demo](https://graph-three.vercel.app/test/drag/error.html)，原因是第二次拖拽转换原点应该为上一次`translate`的值， 但在这里转换原点始终为(0,0)，第二次拖拽转换原点应该为上一次`translate`的值。  
-∴画布拖拽使用方法2，[demo](https://graph-three.vercel.app/test/drag/index.html)  
 
-### 坐标系 [demo](https://graph-three.vercel.app/test/coord/index.html)
+拖拽元素时两种方法都可以：方法 1 适合从按下位置直接计算总位移，方法 2 适合增量更新。拖拽画布时通常用方法 2（或记录拖动起点时的偏移再计算总位移），因为画布每帧都从单位矩阵开始绘制，`translate` 是绝对值而不是增量：如果每次只把 `translate` 设为当前 delta，之前累积的位移会丢失，画布就会跳回原点。[错误示例](https://graph-three.vercel.app/test/drag/error.html) 展示了这个问题，[正确示例](https://graph-three.vercel.app/test/drag/index.html) 使用累加。
 
-1. 拖拽  
-拖拽`方法二`的位移差除以`scale`再累加
+### 坐标系
+
+屏幕坐标和画布坐标的换算关系为：
+
+```text
+worldX = screenX / scale - offsetX
+worldY = screenY / scale - offsetY
+```
+
+拖拽画布时，位移差要先除以 `scale` 再累加：
+
 ```javascript
-let offset = [0, 0]
-let last_mouse = [x1, y1]
-let cur_mouse = [x2, y2]
-
-let delta = [x2 - x1, y2 - y1]
-// 刷新上次移动时的坐标
-last_mouse[0] = cur_mouse[0]
-last_mouse[1] = cur_mouse[1]
-// 累加， 因为偏移值是根据上一次状态
-// delta除以scale再做累加
 offset[0] += delta[0] / scale
 offset[1] += delta[1] / scale
-
-// draw
-ctx.scale(scale, scale)
-ctx.translate(offset[0], offset[1])
 ```
-2. 缩放  
-前后两次缩放的值除以`scale`再减`translate`，然后做差累加
+
+缩放时，要让鼠标下的画布坐标保持不变，可以先算缩放前后的画布坐标，再把差值累加到 `offset`：
+
 ```javascript
-let _scale = 1
-function pos(pos) {
-    let out = [0,0]
-    out[0] = pos[0] / _scale - translate[0]
-    out[1] = pos[1] / _scale - translate[1]
-    return out
+function toWorld([x, y], scale, offset) {
+  return [x / scale - offset[0], y / scale - offset[1]]
 }
 
-old_local = pos([x, y])
-_scale = new_scale
-new_local = pos([x, y])
-let delta = [
-    new_local[0] - old_local[0], 
-    new_local[1] - old_local[1]
-]
-offset[0] += delta[0]
-offset[1] += delta[1]
+const before = toWorld(pointer, oldScale, offset)
+const after = toWorld(pointer, newScale, offset)
+offset[0] += after[0] - before[0]
+offset[1] += after[1] - before[1]
+scale = newScale
+```
 
-// draw
+绘制时统一先 `scale` 再 `translate`：
+
+```javascript
+ctx.save()
 ctx.scale(scale, scale)
 ctx.translate(offset[0], offset[1])
+// 绘制内容
+ctx.restore()
 ```
 
 ### 阻止右键默认菜单
-`mouseup` `contextmenu` `mousedown` 配合使用
-``` javascript
-root.addEventListener(
-    "mouseup",
-    function (e) {
-        e.preventDefault();
-        return true;
-    },
-    true
-);
-root.addEventListener(
-    "contextmenu",
-    function (e) {
-        // e.button === 2右键
-        if (e.button !== 2) {
-            return false;
-        }
-        e.preventDefault();
-        return false;
-    },
-    true
-);
 
+`contextmenu` 事件中调用 `preventDefault()` 可以阻止浏览器自带的右键菜单；再配合 `mousedown` 关闭已经打开的菜单：
+
+```javascript
 root.addEventListener(
-    "mousedown",
-    function (e) {
-        if (e.button === 2) {
-            that.close();
-            e.preventDefault();
-            return true;
-        }
-    },
-    true
-);
+  "contextmenu",
+  function (e) {
+    if (e.button !== 2) {
+      return false
+    }
+    e.preventDefault()
+    return false
+  },
+  true
+)
+
+root.addEventListener("mousedown", function (e) {
+  if (e.button === 2) {
+    e.preventDefault()
+    that.close()
+  }
+})
 ```
+
+这里的 `root` 是菜单 DOM，`that` 指向菜单实例。完整实现见 `src/context_menu.mjs`，全局关闭菜单使用 `ContextMenu.closeAllContextMenus()`。
+
+## 说明与限制
+
+- 节点执行与数据流尚未接入，当前版本主要演示画布交互与渲染。
+- `test/timeline` 等部分页面通过 CDN 加载 Vue、lodash 等脚本，需要联网。
+- 仓库暂未声明开源许可证；如需复用代码，请先联系作者确认授权。
